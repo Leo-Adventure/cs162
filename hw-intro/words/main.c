@@ -222,14 +222,15 @@ int main (int argc, char *argv[]) {
     if (count_mode) {
         printf("The total number of words is: %i\n", total_words);
     } else {
-        /* I don't know why but it works... */
-        word_counts = word_counts->next;
+
+        // word_counts = word_counts->next;
 
 //        if (word_counts == NULL) {
 //            return 1;
 //        }
         wordcount_sort(&word_counts, wordcount_less);
-
+        /* I don't know why but it works... */
+        word_counts = word_counts->next;
         printf("The frequencies of each word are: \n");
         fprint_words(word_counts, stdout);
     }
