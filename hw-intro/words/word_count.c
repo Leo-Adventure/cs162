@@ -33,35 +33,69 @@ char *new_string(char *str) {
 }
 
 int init_words(WordCount **wclist) {
-  /* Initialize word count.
-     Returns 0 if no errors are encountered
-     in the body of this function; 1 otherwise.
-  */
-  *wclist = NULL;
-  return 0;
+    /* Initialize word count.
+     * Returns 0 if no errors are encountered
+     * in the body of this function; 1 otherwise.
+     */
+    *wclist = (WordCount *)malloc(sizeof(WordCount));
+    (*wclist)->word = NULL;
+    (*wclist)->count = 0;
+    (*wclist)->next = NULL;
+    return 0;
 }
 
 ssize_t len_words(WordCount *wchead) {
-  /* Return -1 if any errors are
+    /* Return -1 if any errors are
      encountered in the body of
      this function.
-  */
+    */
     size_t len = 0;
+    for (WordCount *wc = wchead; wc->next; wc = wc->next) {
+        len++;
+    }
     return len;
 }
 
 WordCount *find_word(WordCount *wchead, char *word) {
-  /* Return count for word, if it exists */
-  WordCount *wc = NULL;
-  return wc;
+    /* Return count for word, if it exists, otherwise return NULL. */
+    WordCount *wc = NULL;
+    for (wc = wchead; wc; wc = wc->next) {
+        if (strcmp(wc->word, word) == 0) {
+            return wc;
+        }
+    }
+    return NULL;
 }
 
 int add_word(WordCount **wclist, char *word) {
-  /* If word is present in word_counts list, increment the count.
-     Otherwise insert with count 1.
-     Returns 0 if no errors are encountered in the body of this function; 1 otherwise.
-  */
- return 0;
+    /* If word is present in word_counts list, increment the count.
+     * Otherwise insert with count 1.
+     * Returns 0 if no errors are encountered in the body of this function; 1 otherwise.
+     */
+    /* If the link is empty */
+    if ((*wclist)->word == NULL) {
+        WordCount *tmp = (WordCount *)malloc(sizeof(WordCount));
+        tmp->word = new_string(word);
+        tmp->count = 1;
+        tmp->next = NULL;
+        free(*wclist);
+        *wclist = tmp;
+    } else {
+        WordCount *wc = NULL;
+        if ((wc = find_word(*wclist, word)) != NULL) {
+            wc->count += 1;
+        } else {
+            for (wc = *wclist; wc->next != NULL; wc = wc->next) {
+                ;
+            }
+            WordCount* tmp = (WordCount *)malloc(sizeof(WordCount));
+            tmp->word = new_string(word);
+            tmp->count = 1;
+            tmp->next = NULL;
+            wc->next = tmp;
+        }
+    }
+    return 0;
 }
 
 void fprint_words(WordCount *wchead, FILE *ofile) {
