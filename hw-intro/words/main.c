@@ -225,9 +225,10 @@ int main (int argc, char *argv[]) {
 
         // word_counts = word_counts->next;
 
-//        if (word_counts == NULL) {
-//            return 1;
-//        }
+        /* There is no word at all. */
+        if (word_counts->word == NULL) {
+            return 0;
+        }
         wordcount_sort(&word_counts, wordcount_less);
         /* I don't know why but it works... */
         word_counts = word_counts->next;
