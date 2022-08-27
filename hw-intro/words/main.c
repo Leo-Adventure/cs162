@@ -55,15 +55,20 @@ int num_words(FILE* infile) {
     if (isalpha(c)) {
         word_length += 1;
         last_is_separator = false;
-    } else if (c == '\n' || c == ' ' || feof(infile)) {
+    } else if (c == '\n' || c == ' ') {
         if (!last_is_separator && word_length > 1) {
             num_words += 1;
             word_length = 0;
             last_is_separator = true;
+        } else if (!last_is_separator && word_length == 1) {
+            word_length = 0;
+            last_is_separator = true;
         }
-        if (feof(infile)) {
-            break;
+    } else if (feof(infile)) {
+        if (word_length > 1) {
+            num_words += 1;
         }
+        break;
     }
   } while(1);
 
