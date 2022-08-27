@@ -101,14 +101,18 @@ int count_words(WordCount **wclist, FILE *infile) {
                 word[length] = '\0';
                 last_is_separator = true;
                 if (length > 1) {
-                    add_word(wclist, word);
+                    if (add_word(wclist, word)) {
+                        return 1;
+                    }
                 }
                 length = 0;
             }
         } else if (feof(infile)) {
             if (length > 1) {
                 word[length] = '\0';
-                add_word(wclist, word);
+                if (add_word(wclist, word)) {
+                    return 1;
+                }
             }
             break;
         }
@@ -195,7 +199,9 @@ int main (int argc, char *argv[]) {
         if (count_mode) {
             total_words = num_words(infile);
         } else {
-            count_words(&word_counts, infile);
+            if (count_words(&word_counts, infile)) {
+                return 1;
+            }
         }
     } else {
         // At least one file specified. Useful functions: fopen(), fclose().
@@ -213,7 +219,9 @@ int main (int argc, char *argv[]) {
             if (count_mode) {
                 total_words += num_words(infile);
             } else {
-                count_words(&word_counts, infile);
+                if (count_words(&word_counts, infile)) {
+                    return 1;
+                }
             }
             fclose(infile);
         }
