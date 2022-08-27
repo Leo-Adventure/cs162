@@ -25,11 +25,11 @@ Mutators take a reference to a list as first arg.
 /* Basic utilities */
 
 char *new_string(char *str) {
-  char *new_str = (char *) malloc(strlen(str) + 1);
-  if (new_str == NULL) {
-    return NULL;
-  }
-  return strcpy(new_str, str);
+    char *new_str = (char *) malloc(strlen(str) + 1);
+    if (new_str == NULL) {
+        return NULL;
+    }
+    return strcpy(new_str, str);
 }
 
 int init_words(WordCount **wclist) {
@@ -38,6 +38,9 @@ int init_words(WordCount **wclist) {
      * in the body of this function; 1 otherwise.
      */
     *wclist = (WordCount *)malloc(sizeof(WordCount));
+    if (*wclist == NULL) {
+        exit(1);
+    }
     (*wclist)->word = NULL;
     (*wclist)->count = 0;
     (*wclist)->next = NULL;
@@ -75,6 +78,9 @@ int add_word(WordCount **wclist, char *word) {
     /* If the link is empty */
     if ((*wclist)->word == NULL) {
         WordCount *tmp = (WordCount *)malloc(sizeof(WordCount));
+        if (tmp == NULL) {
+            exit(1);
+        }
         tmp->word = new_string(word);
         tmp->count = 1;
         tmp->next = NULL;
@@ -89,6 +95,9 @@ int add_word(WordCount **wclist, char *word) {
                 ;
             }
             WordCount* tmp = (WordCount *)malloc(sizeof(WordCount));
+            if (tmp == NULL) {
+                exit(1);
+            }
             tmp->word = new_string(word);
             tmp->count = 1;
             tmp->next = NULL;
