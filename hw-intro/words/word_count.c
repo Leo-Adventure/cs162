@@ -82,6 +82,9 @@ int add_word(WordCount **wclist, char *word) {
             return 1;
         }
         tmp->word = new_string(word);
+        if (tmp->word == NULL) {
+            return 1;
+        }
         tmp->count = 1;
         tmp->next = NULL;
         free(*wclist);
@@ -99,6 +102,9 @@ int add_word(WordCount **wclist, char *word) {
                 return 1;
             }
             tmp->word = new_string(word);
+            if (tmp->word == NULL) {
+                return 1;
+            }
             tmp->count = 1;
             tmp->next = NULL;
             wc->next = tmp;
