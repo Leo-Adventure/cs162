@@ -39,7 +39,7 @@ int init_words(WordCount **wclist) {
      */
     *wclist = (WordCount *)malloc(sizeof(WordCount));
     if (*wclist == NULL) {
-        exit(1);
+        return 1;
     }
     (*wclist)->word = NULL;
     (*wclist)->count = 0;
@@ -79,7 +79,7 @@ int add_word(WordCount **wclist, char *word) {
     if ((*wclist)->word == NULL) {
         WordCount *tmp = (WordCount *)malloc(sizeof(WordCount));
         if (tmp == NULL) {
-            exit(1);
+            return 1;
         }
         tmp->word = new_string(word);
         tmp->count = 1;
@@ -96,7 +96,7 @@ int add_word(WordCount **wclist, char *word) {
             }
             WordCount* tmp = (WordCount *)malloc(sizeof(WordCount));
             if (tmp == NULL) {
-                exit(1);
+                return 1;
             }
             tmp->word = new_string(word);
             tmp->count = 1;
