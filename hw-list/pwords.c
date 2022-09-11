@@ -32,19 +32,48 @@
 #include "word_count.h"
 #include "word_helpers.h"
 
+int rc;
+word_count_list_t word_counts;
+
+void *thread_words(void* filename) {
+  FILE* infile = fopen(filename, "r");
+
+  if (infile == NULL) {
+    fprintf(stderr, "File does not exist.\n");
+    exit(1);
+  }
+
+  count_words(&word_counts, infile);
+  fclose(infile);
+
+  return NULL;
+}
+
 /*
  * main - handle command line, spawning one thread per file.
  */
 int main(int argc, char* argv[]) {
   /* Create the empty data structure. */
-  word_count_list_t word_counts;
   init_words(&word_counts);
 
   if (argc <= 1) {
     /* Process stdin in a single thread. */
     count_words(&word_counts, stdin);
   } else {
-    /* TODO */
+    pthread_t threads[argc - 1];
+
+    for (int t = 1; t < argc; t++) {
+      rc = pthread_create(&threads[t - 1], NULL, thread_words, (void *)argv[t]);
+
+      if (rc) {
+        printf("ERROR; return code from pthread_create() is %d\n", rc);
+        exit(-1);
+      }
+    }
+
+    for (int t = 1; t < argc; t ++) {
+      pthread_join(threads[t - 1], NULL);
+    }
   }
 
   /* Output final result of all threads' work. */
