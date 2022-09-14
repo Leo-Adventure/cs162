@@ -47,11 +47,11 @@ size_t len_words(word_count_list_t* wclist) {
   int cnt = 0;
   struct list_elem *e;
 
+  pthread_mutex_lock(&(wclist->lock));
   for (e = list_begin(&(wclist->lst)); e != list_end(&(wclist->lst)); e = list_next(e)) {
-    pthread_mutex_lock(&(wclist->lock));
     cnt++;
-    pthread_mutex_unlock(&(wclist->lock));
   }
+  pthread_mutex_unlock(&(wclist->lock));
   return cnt;
 }
 

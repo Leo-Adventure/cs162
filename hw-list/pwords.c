@@ -32,18 +32,36 @@
 #include "word_count.h"
 #include "word_helpers.h"
 
-int rc;
-word_count_list_t word_counts;
+struct thread_args {
+  word_count_list_t *word_counts;
+  char *filename;
+};
 
-void *thread_words(void* filename) {
-  FILE* infile = fopen(filename, "r");
+// void *thread_words(void* filename) {
+//   FILE* infile = fopen(filename, "r");
+
+//   if (infile == NULL) {
+//     fprintf(stderr, "File does not exist.\n");
+//     exit(1);
+//   }
+
+//   count_words(&word_counts, infile);
+//   fclose(infile);
+
+//   return NULL;
+// }
+
+extern char *new_string(char *);
+
+void *thread_words(void *args) {
+  FILE* infile = fopen(((struct thread_args *)args)->filename, "r");
 
   if (infile == NULL) {
     fprintf(stderr, "File does not exist.\n");
     exit(1);
   }
 
-  count_words(&word_counts, infile);
+  count_words(((struct thread_args *)args)->word_counts, infile);
   fclose(infile);
 
   return NULL;
@@ -54,6 +72,8 @@ void *thread_words(void* filename) {
  */
 int main(int argc, char* argv[]) {
   /* Create the empty data structure. */
+  int rc;
+  word_count_list_t word_counts;
   init_words(&word_counts);
 
   if (argc <= 1) {
@@ -61,9 +81,13 @@ int main(int argc, char* argv[]) {
     count_words(&word_counts, stdin);
   } else {
     pthread_t threads[argc - 1];
+    struct thread_args args[argc - 1];
 
     for (int t = 1; t < argc; t++) {
-      rc = pthread_create(&threads[t - 1], NULL, thread_words, (void *)argv[t]);
+      args[t - 1].word_counts = &word_counts;
+      args[t - 1].filename = new_string(argv[t]);
+      
+      rc = pthread_create(&threads[t - 1], NULL, thread_words, (void *)&args[t - 1]);
 
       if (rc) {
         printf("ERROR; return code from pthread_create() is %d\n", rc);
