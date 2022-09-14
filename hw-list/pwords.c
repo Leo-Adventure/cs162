@@ -81,6 +81,12 @@ int main(int argc, char* argv[]) {
     count_words(&word_counts, stdin);
   } else {
     pthread_t threads[argc - 1];
+    /* 
+     * Do remember to declare args to be a array, rather than a variable. Let's consider 
+     * args is a variable. Then all thread will share the same args, which means when thread
+     * A is running, main thread can change the filename and create thread B... Then the thread
+     * will crash.
+     */
     struct thread_args args[argc - 1];
 
     for (int t = 1; t < argc; t++) {
