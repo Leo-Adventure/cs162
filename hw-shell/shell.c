@@ -84,6 +84,7 @@ int cmd_cd(unused struct tokens* tokens) {
 
 void execute(struct tokens* tokens) {
   char* path = tokens_get_token(tokens, 0);  // get path
+  printf("%s", path);
   if (path == NULL) {
     printf("In execute: path should not be empty\n");
     exit(-1);
@@ -94,9 +95,18 @@ void execute(struct tokens* tokens) {
   /* Initialize the argv for execv. */
   for (int i = 0; i < argc; i++) {
     char* arg = tokens_get_token(tokens, i);
-    memcpy(argv[i], arg, strlen(arg));
+    argv[i] = malloc(strlen(arg) + 1);
+    if (argv[i] == NULL) {
+      printf("In execute: malloc failed\n");
+      exit(-1);
+    }
+    memcpy(argv[i], arg, strlen(arg) + 1);
   }
   argv[argc] = NULL;
+
+  for (int i = 0; i < argc; i++) {
+    printf("%s\n", argv[i]);
+  }
 
   int retval = execv(path, argv);
   if (retval == -1) {
