@@ -1,5 +1,13 @@
 #pragma once
 
+/* Definition of tokens should be put here rather than .c */
+struct tokens {
+  size_t tokens_length;
+  char** tokens;
+  size_t buffers_length;
+  char** buffers;
+};
+
 /* A struct that represents a list of words. */
 struct tokens;
 

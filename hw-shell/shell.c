@@ -30,6 +30,8 @@ pid_t shell_pgid;
 
 int cmd_exit(struct tokens* tokens);
 int cmd_help(struct tokens* tokens);
+int cmd_pwd(struct tokens* tokens);
+int cmd_cd(struct tokens* tokens);
 
 /* Built-in command functions take token array (see parse.h) and return int */
 typedef int cmd_fun_t(struct tokens* tokens);
@@ -44,6 +46,8 @@ typedef struct fun_desc {
 fun_desc_t cmd_table[] = {
     {cmd_help, "?", "show this help menu"},
     {cmd_exit, "exit", "exit the command shell"},
+    {cmd_pwd, "pwd", "print the current working directory to stand output"},
+    {cmd_cd, "cd", "take an argument and change current working directory to that directory"},
 };
 
 /* Prints a helpful description for the given command */
@@ -55,6 +59,28 @@ int cmd_help(unused struct tokens* tokens) {
 
 /* Exits this shell */
 int cmd_exit(unused struct tokens* tokens) { exit(0); }
+
+/* Prints the current working directory to stand output */
+int cmd_pwd(unused struct tokens* tokens) {
+  char* pwd = getcwd(NULL, 0);
+  if (pwd == NULL) {
+    printf("In cmd_pwd: failed to allocate for pwd\n");
+    exit(-1);
+  }
+  fprintf(stdout, "%s\n", pwd);
+  free(pwd);
+  return 0;
+}
+
+/* Changes current working directory to argument user input */
+int cmd_cd(unused struct tokens* tokens) {
+  int retval = chdir(tokens->tokens[1]);
+  if (retval == -1) {
+    printf("In cmd_cd: path doesn't exist\n");
+    exit(-1);
+  }
+  return 0;
+}
 
 /* Looks up the built-in command, if it exists. */
 int lookup(char cmd[]) {
