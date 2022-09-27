@@ -83,7 +83,7 @@ int cmd_cd(unused struct tokens* tokens) {
 }
 
 void execute(struct tokens* tokens) {
-  char* path = tokens_get_tokens(tokens, 0);  // get path
+  char* path = tokens_get_token(tokens, 0);  // get path
   if (path == NULL) {
     printf("In execute: path should not be empty\n");
     exit(-1);
@@ -93,8 +93,8 @@ void execute(struct tokens* tokens) {
 
   /* Initialize the argv for execv. */
   for (int i = 0; i < argc; i++) {
-    char* arg = tokens_get_tokens(tokens, i);
-    memcpy(argv[i], arg, sizeof(arg));
+    char* arg = tokens_get_token(tokens, i);
+    memcpy(argv[i], arg, strlen(arg));
   }
   argv[argc] = NULL;
 
