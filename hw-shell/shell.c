@@ -82,7 +82,7 @@ int cmd_cd(unused struct tokens* tokens) {
   return 0;
 }
 
-void execute(struct tokens* tokens) {
+int execute(struct tokens* tokens) {
   char* filename = tokens_get_token(tokens, 0);  // get filename
   // printf("%s", filename);
   char fullpath[4096];
@@ -148,9 +148,10 @@ void execute(struct tokens* tokens) {
 
   int retval = execv(fullpath, argv);
   if (retval == -1) {
-    printf("In execute: caught an error\n");
-    exit(-1);
+    printf("In execute: no such program\n");
+    return -1;
   }
+  return 0;
 }
 
 /* Looks up the built-in command, if it exists. */
@@ -207,7 +208,12 @@ int main(unused int argc, unused char* argv[]) {
     if (fundex >= 0) {
       cmd_table[fundex].fun(tokens);
     } else {
-      execute(tokens);
+      int pid = fork();
+      if (pid == 0) {
+        execute(tokens);
+      } else {
+        wait(-1);
+      }
     }
 
     if (shell_is_interactive)
