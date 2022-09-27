@@ -82,6 +82,29 @@ int cmd_cd(unused struct tokens* tokens) {
   return 0;
 }
 
+void execute(struct tokens* tokens) {
+  char* path = tokens_get_tokens(tokens, 0);  // get path
+  if (path == NULL) {
+    printf("In execute: path should not be empty\n");
+    exit(-1);
+  }
+  int argc = tokens_get_length(tokens);
+  char* argv[argc + 1];  // store the arguments
+
+  /* Initialize the argv for execv. */
+  for (int i = 0; i < argc; i++) {
+    char* arg = tokens_get_tokens(tokens, i);
+    memcpy(argv[i], arg, sizeof(arg));
+  }
+  argv[argc] = NULL;
+
+  int retval = execv(path, argv);
+  if (retval == -1) {
+    printf("In execute: caught an error\n");
+    exit(-1);
+  }
+}
+
 /* Looks up the built-in command, if it exists. */
 int lookup(char cmd[]) {
   for (unsigned int i = 0; i < sizeof(cmd_table) / sizeof(fun_desc_t); i++)
@@ -136,8 +159,7 @@ int main(unused int argc, unused char* argv[]) {
     if (fundex >= 0) {
       cmd_table[fundex].fun(tokens);
     } else {
-      /* REPLACE this to run commands as programs. */
-      fprintf(stdout, "This shell doesn't know how to run programs.\n");
+      execute(tokens);
     }
 
     if (shell_is_interactive)
