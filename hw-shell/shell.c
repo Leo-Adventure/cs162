@@ -83,12 +83,50 @@ int cmd_cd(unused struct tokens* tokens) {
 }
 
 void execute(struct tokens* tokens) {
-  char* path = tokens_get_token(tokens, 0);  // get path
-  printf("%s", path);
-  if (path == NULL) {
-    printf("In execute: path should not be empty\n");
+  char* filename = tokens_get_token(tokens, 0);  // get filename
+  // printf("%s", filename);
+  char fullpath[4096];
+  if (filename == NULL) {
+    printf("In execute: filename should not be empty\n");
     exit(-1);
   }
+
+  FILE* fp;
+  if ((fp = fopen(filename, "r"))) {
+    /* If it is full name. */
+    fclose(fp);
+    memcpy(fullpath, filename, strlen(filename) + 1);
+  } else {
+    /* If it is not then search for environmental variables. */
+    char* envvar = getenv("PATH");
+    char* token;
+    char* saveptr;
+    bool flag = false;
+    for (char* str = envvar; ; str = NULL) {
+      
+      token = strtok_r(str, ":", &saveptr);
+      if (token == NULL) {
+        break;
+      }
+
+      memcpy(fullpath, token, strlen(token) + 1);
+      fullpath[strlen(token)] = '/';
+      fullpath[strlen(token) + 1] = '\0';
+      // printf("%s\n", fullpath);
+      // printf("%s\n", filename);
+      strcat(fullpath, filename); // contcatenate the path and filename
+      if ((fp = fopen(fullpath, "r"))) {
+        fclose(fp);
+        flag = true;
+        break;
+      }
+    }
+    if (!flag) {
+      printf("In execution: your program doesn't exist\n");
+    }
+  }
+
+  // printf("%s\n", fullpath);
   int argc = tokens_get_length(tokens);
   char* argv[argc + 1];  // store the arguments
 
@@ -108,7 +146,7 @@ void execute(struct tokens* tokens) {
     printf("%s\n", argv[i]);
   }
 
-  int retval = execv(path, argv);
+  int retval = execv(filename, argv);
   if (retval == -1) {
     printf("In execute: caught an error\n");
     exit(-1);
