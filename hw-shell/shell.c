@@ -126,7 +126,7 @@ void execute(struct tokens* tokens) {
     }
   }
 
-  // printf("%s\n", fullpath);
+  printf("%s\n", fullpath);
   int argc = tokens_get_length(tokens);
   char* argv[argc + 1];  // store the arguments
 
@@ -146,7 +146,7 @@ void execute(struct tokens* tokens) {
     printf("%s\n", argv[i]);
   }
 
-  int retval = execv(filename, argv);
+  int retval = execv(fullpath, argv);
   if (retval == -1) {
     printf("In execute: caught an error\n");
     exit(-1);
