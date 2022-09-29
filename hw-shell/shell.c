@@ -91,67 +91,73 @@ int execute(struct tokens* tokens) {
     exit(-1);
   }
 
-  FILE* fp;
-  if ((fp = fopen(filename, "r"))) {
-    /* If it is full name. */
-    fclose(fp);
-    memcpy(fullpath, filename, strlen(filename) + 1);
-  } else {
-    /* If it is not then search for environmental variables. */
-    char* envvar = getenv("PATH");
-    char* token;
-    char* saveptr;
-    bool flag = false;
-    for (char* str = envvar; ; str = NULL) {
+  int status;
+  int pid = fork();
+
+  if (pid == 0) {
+    FILE* fp;
+    if ((fp = fopen(filename, "r"))) {
+      /* If it is full name. */
+      fclose(fp);
+      memcpy(fullpath, filename, strlen(filename) + 1);
+    } else {
+      /* If it is not then search for environmental variables. */
+      char* envvar = getenv("PATH");
+      char* token;
+      char* saveptr;
+      bool flag = false;
+      for (char* str = envvar; ; str = NULL) {
       
-      token = strtok_r(str, ":", &saveptr);
-      if (token == NULL) {
-        break;
+        token = strtok_r(str, ":", &saveptr);
+        if (token == NULL) {
+          break;
+        }
+
+        memcpy(fullpath, token, strlen(token) + 1);
+        fullpath[strlen(token)] = '/';
+        fullpath[strlen(token) + 1] = '\0';
+        strcat(fullpath, filename); // contcatenate the path and filename
+        if ((fp = fopen(fullpath, "r"))) {
+          fclose(fp);
+          flag = true;
+          break;
+        }
       }
-
-      memcpy(fullpath, token, strlen(token) + 1);
-      fullpath[strlen(token)] = '/';
-      fullpath[strlen(token) + 1] = '\0';
-      // printf("%s\n", fullpath);
-      // printf("%s\n", filename);
-      strcat(fullpath, filename); // contcatenate the path and filename
-      if ((fp = fopen(fullpath, "r"))) {
-        fclose(fp);
-        flag = true;
-        break;
+      if (!flag) {
+        printf("In execution: your program doesn't exist\n");
       }
     }
-    if (!flag) {
-      printf("In execution: your program doesn't exist\n");
+
+    printf("%s\n", fullpath);
+    int argc = tokens_get_length(tokens);
+    char* argv[argc + 1];  // store the arguments
+
+    /* Initialize the argv for execv. */
+    for (int i = 0; i < argc; i++) {
+      char* arg = tokens_get_token(tokens, i);
+      argv[i] = malloc(strlen(arg) + 1);
+      if (argv[i] == NULL) {
+        printf("In execute: malloc failed\n");
+        exit(-1);
+      }
+      memcpy(argv[i], arg, strlen(arg) + 1);
     }
-  }
+    argv[argc] = NULL;
 
-  printf("%s\n", fullpath);
-  int argc = tokens_get_length(tokens);
-  char* argv[argc + 1];  // store the arguments
-
-  /* Initialize the argv for execv. */
-  for (int i = 0; i < argc; i++) {
-    char* arg = tokens_get_token(tokens, i);
-    argv[i] = malloc(strlen(arg) + 1);
-    if (argv[i] == NULL) {
-      printf("In execute: malloc failed\n");
-      exit(-1);
+    for (int i = 0; i < argc; i++) {
+      printf("%s\n", argv[i]);
     }
-    memcpy(argv[i], arg, strlen(arg) + 1);
-  }
-  argv[argc] = NULL;
 
-  for (int i = 0; i < argc; i++) {
-    printf("%s\n", argv[i]);
+    int retval = execv(fullpath, argv);
+    if (retval == -1) {
+      printf("In execute: no such program\n");
+      return -1;
+    }
+  } else {
+    waitpid(pid, &status, 0);
   }
-
-  int retval = execv(fullpath, argv);
-  if (retval == -1) {
-    printf("In execute: no such program\n");
-    return -1;
-  }
-  return 0;
+  
+  return status;
 }
 
 /* Looks up the built-in command, if it exists. */
@@ -208,12 +214,7 @@ int main(unused int argc, unused char* argv[]) {
     if (fundex >= 0) {
       cmd_table[fundex].fun(tokens);
     } else {
-      int pid = fork();
-      if (pid == 0) {
-        execute(tokens);
-      } else {
-        wait(-1);
-      }
+      execute(tokens);
     }
 
     if (shell_is_interactive)
