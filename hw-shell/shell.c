@@ -147,10 +147,12 @@ int execute(struct tokens* tokens) {
         int fd = open(arg, O_RDONLY);
         dup2(fd, STDIN_FILENO);
         close(fd);
+        stdin_redir = false; // prepare for next redirection
       } else if (stdout_redir) {
         int fd = creat(arg, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
         dup2(fd, STDOUT_FILENO);
         close(fd);
+        stdout_redir = false; // prepare for next redirection
       } else {
         /* When it is a normal parameter. */
         argv[argc] = malloc(strlen(arg) + 1);
