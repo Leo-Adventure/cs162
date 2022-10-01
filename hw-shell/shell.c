@@ -129,47 +129,44 @@ int execute(struct tokens* tokens) {
     }
 
     printf("%s\n", fullpath);
-    int argc = tokens_get_length(tokens);
-    char* argv[argc + 1];  // store the arguments
-    int read_fd;
-    int write_fd;
+    int length = tokens_get_length(tokens);
+    int argc = 0;
+    char* argv[length + 1];  // store the arguments
+    bool stdin_redir = false, stdout_redir = false;
 
     /* Initialize the argv for execv. */
-    for (int i = 0; i < argc; i++) {
+    for (int i = 0; i < length; i++) {
       char* arg = tokens_get_token(tokens, i);
       if (strcmp(arg, "<") == 0) {
         /* If it is an input redirection character. */
-        char* output_file_name = tokens_get_token(tokens, ++i);
-        read_fd = open(output_file_name, O_RDONLY);
-        if (read_fd == -1) {
-          printf("In execute: fail to allocate read fd to redirection.\n");
-        }
-        dup2(read_fd, STDIN_FILENO);
-        close(read_fd);
+        stdin_redir = true;
       } else if (strcmp(arg, ">") == 0) {
         /* If it is an output redirection character. */
-        char* output_file_name = tokens_get_token(tokens, ++i);
-        write_fd = creat(output_file_name, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
-        if (write_fd == -1) {
-          printf("In execute: fail to allocate write fd to redirection.\n");
-        }
-        dup2(write_fd, STDOUT_FILENO);
-        close(write_fd);
+        stdout_redir = true;
+      } else if (stdin_redir) {
+        int fd = open(arg, O_RDONLY);
+        dup2(fd, STDIN_FILENO);
+        close(fd);
+      } else if (stdout_redir) {
+        int fd = creat(arg, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        dup2(fd, STDOUT_FILENO);
+        close(fd);
       } else {
         /* When it is a normal parameter. */
-        argv[i] = malloc(strlen(arg) + 1);
-        if (argv[i] == NULL) {
+        argv[argc] = malloc(strlen(arg) + 1);
+        if (argv[argc] == NULL) {
           printf("In execute: malloc failed\n");
           exit(-1);
         }
-        memcpy(argv[i], arg, strlen(arg) + 1);
+        memcpy(argv[argc], arg, strlen(arg) + 1);
+        argc++;
       }
     }
     argv[argc] = NULL;
 
-    for (int i = 0; i < argc; i++) {
-      printf("%s\n", argv[i]);
-    }
+    // for (int i = 0; i < length; i++) {
+    //   printf("%s\n", argv[i]);
+    // }
 
     int retval = execv(fullpath, argv);
     if (retval == -1) {
