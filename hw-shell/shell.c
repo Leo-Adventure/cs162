@@ -131,16 +131,39 @@ int execute(struct tokens* tokens) {
     printf("%s\n", fullpath);
     int argc = tokens_get_length(tokens);
     char* argv[argc + 1];  // store the arguments
+    int read_fd;
+    int write_fd;
 
     /* Initialize the argv for execv. */
     for (int i = 0; i < argc; i++) {
       char* arg = tokens_get_token(tokens, i);
-      argv[i] = malloc(strlen(arg) + 1);
-      if (argv[i] == NULL) {
-        printf("In execute: malloc failed\n");
-        exit(-1);
+      if (strcmp(arg, "<") == 0) {
+        /* If it is an input redirection character. */
+        char* output_file_name = tokens_get_token(tokens, ++i);
+        read_fd = open(output_file_name, O_RDONLY);
+        if (read_fd == -1) {
+          printf("In execute: fail to allocate read fd to redirection.\n");
+        }
+        dup2(read_fd, STDIN_FILENO);
+        close(read_fd);
+      } else if (strcmp(arg, ">") == 0) {
+        /* If it is an output redirection character. */
+        char* output_file_name = tokens_get_token(tokens, ++i);
+        write_fd = creat(output_file_name, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+        if (write_fd == -1) {
+          printf("In execute: fail to allocate write fd to redirection.\n");
+        }
+        dup2(write_fd, STDOUT_FILENO);
+        close(write_fd);
+      } else {
+        /* When it is a normal parameter. */
+        argv[i] = malloc(strlen(arg) + 1);
+        if (argv[i] == NULL) {
+          printf("In execute: malloc failed\n");
+          exit(-1);
+        }
+        memcpy(argv[i], arg, strlen(arg) + 1);
       }
-      memcpy(argv[i], arg, strlen(arg) + 1);
     }
     argv[argc] = NULL;
 
