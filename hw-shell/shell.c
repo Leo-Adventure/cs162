@@ -204,6 +204,7 @@ int execute(struct tokens* tokens) {
       out = pipes[1];
       program(argv, in, out);
       close(out);
+      out = 1;
 
       argc = 0;
       if (in != STDIN_FILENO) {
