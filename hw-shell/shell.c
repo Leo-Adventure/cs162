@@ -190,12 +190,28 @@ int execute(struct tokens* tokens) {
   int argc = 0;
   char* argv[length + 1];  // store the arguments
   int in = 0, out = 1;
+  int pipes[2];
 
   /* Initialize the argv for execv. */
   for (int i = 0; i < length; i++) {
     char* arg = tokens_get_token(tokens, i);
 
-    if (strcmp(arg, "<") == 0) {
+    if (strcmp(arg, "|") == 0) {
+      argv[argc] = NULL;
+      /* Create a pipe. */
+      pipe(pipes);
+      
+      out = pipes[1];
+      program(argv, in, out);
+      close(out);
+
+      argc = 0;
+      if (in != STDIN_FILENO) {
+        close(in);
+      }
+      in = pipes[0];
+
+    } else if (strcmp(arg, "<") == 0) {
       /* If it is an input redirection character. */
       arg = tokens_get_token(tokens, ++i);
       in = open(arg, O_RDONLY);
