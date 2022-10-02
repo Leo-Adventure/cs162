@@ -212,10 +212,10 @@ int execute(struct tokens* tokens) {
   }
   argv[argc] = NULL;
 
-  // debug
-  for (int i = 0; i < argc; i++) {
-    printf("%s\n", argv[i]);
-  }
+  // // debug
+  // for (int i = 0; i < argc; i++) {
+  //   printf("%s\n", argv[i]);
+  // }
 
   program(argv, in, out);
 
