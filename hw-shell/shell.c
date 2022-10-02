@@ -82,104 +82,144 @@ int cmd_cd(unused struct tokens* tokens) {
   return 0;
 }
 
-int execute(struct tokens* tokens) {
-  char* filename = tokens_get_token(tokens, 0);  // get filename
-  // printf("%s", filename);
-  char fullpath[4096];
-  if (filename == NULL) {
-    printf("In execute: filename should not be empty\n");
+char* find_path(char* path) {
+  FILE* fp = fopen(path, "r");
+  char* abs_path = malloc(4096);  // store absolute path.
+  if (abs_path == NULL) {
+    printf("In find_path: malloc failed\n");
     exit(-1);
   }
 
-  int status;
-  int pid = fork();
-
-  if (pid == 0) {
-    FILE* fp;
-    if ((fp = fopen(filename, "r"))) {
-      /* If it is full name. */
-      fclose(fp);
-      memcpy(fullpath, filename, strlen(filename) + 1);
-    } else {
-      /* If it is not then search for environmental variables. */
-      char* envvar = getenv("PATH");
-      char* token;
-      char* saveptr;
-      bool flag = false;
-      for (char* str = envvar; ; str = NULL) {
-      
-        token = strtok_r(str, ":", &saveptr);
-        if (token == NULL) {
-          break;
-        }
-
-        memcpy(fullpath, token, strlen(token) + 1);
-        fullpath[strlen(token)] = '/';
-        fullpath[strlen(token) + 1] = '\0';
-        strcat(fullpath, filename); // contcatenate the path and filename
-        if ((fp = fopen(fullpath, "r"))) {
-          fclose(fp);
-          flag = true;
-          break;
-        }
-      }
-      if (!flag) {
-        printf("In execution: your program doesn't exist\n");
-      }
-    }
-
-    printf("%s\n", fullpath);
-    int length = tokens_get_length(tokens);
-    int argc = 0;
-    char* argv[length + 1];  // store the arguments
-    bool stdin_redir = false, stdout_redir = false;
-
-    /* Initialize the argv for execv. */
-    for (int i = 0; i < length; i++) {
-      char* arg = tokens_get_token(tokens, i);
-      if (strcmp(arg, "<") == 0) {
-        /* If it is an input redirection character. */
-        stdin_redir = true;
-      } else if (strcmp(arg, ">") == 0) {
-        /* If it is an output redirection character. */
-        stdout_redir = true;
-      } else if (stdin_redir) {
-        int fd = open(arg, O_RDONLY);
-        dup2(fd, STDIN_FILENO);
-        close(fd);
-        stdin_redir = false; // prepare for next redirection
-      } else if (stdout_redir) {
-        int fd = creat(arg, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-        dup2(fd, STDOUT_FILENO);
-        close(fd);
-        stdout_redir = false; // prepare for next redirection
-      } else {
-        /* When it is a normal parameter. */
-        argv[argc] = malloc(strlen(arg) + 1);
-        if (argv[argc] == NULL) {
-          printf("In execute: malloc failed\n");
-          exit(-1);
-        }
-        memcpy(argv[argc], arg, strlen(arg) + 1);
-        argc++;
-      }
-    }
-    argv[argc] = NULL;
-
-    // for (int i = 0; i < length; i++) {
-    //   printf("%s\n", argv[i]);
-    // }
-
-    int retval = execv(fullpath, argv);
-    if (retval == -1) {
-      printf("In execute: no such program\n");
-      return -1;
-    }
+  if (fp) {
+    /* If the file path can be opened successfully, then it is a full path. */
+    fclose(fp);
+    memcpy(abs_path, path, strlen(path) + 1);
+    return abs_path;
   } else {
-    waitpid(pid, &status, 0);
+    /* If it is not then search for environmental variables. */
+    char* envvar = getenv("PATH");
+    char* token;
+    char* saveptr;
+    for (char* str = envvar; ; str = NULL) {
+    
+      token = strtok_r(str, ":", &saveptr);
+      if (token == NULL) {
+        break;
+      }
+
+      memcpy(abs_path, token, strlen(token) + 1);
+      abs_path[strlen(token)] = '/';
+      abs_path[strlen(token) + 1] = '\0';
+      strcat(abs_path, path); // contcatenate the path and filename
+      if ((fp = fopen(abs_path, "r"))) {
+        fclose(fp);
+        return abs_path;
+      }
+    }
   }
-  
-  return status;
+  return NULL;
+}
+
+int program(char** argv, int in, int out) {
+  pid_t pid = fork();
+  int status;
+
+  if (pid == -1) {
+    printf("In program: fork() creat child process failed\n");
+    exit(-1);
+  } else if (pid == 0) {
+    /* Child process. */
+    if (in != 0) {
+      dup2(in, STDIN_FILENO);
+    }
+    if (out != 1) {
+      dup2(out, STDOUT_FILENO);
+    }
+
+    
+    execv(find_path(argv[0]), argv);
+  } else {
+    wait(&status);
+    return status;
+  }
+}
+
+int execute(struct tokens* tokens) {
+  // char* filename = tokens_get_token(tokens, 0);  // get filename
+  // // printf("%s", filename);
+  // char fullpath[4096];
+  // if (filename == NULL) {
+  //   printf("In execute: filename should not be empty\n");
+  //   exit(-1);
+  // }
+
+  // FILE* fp;
+  // if ((fp = fopen(filename, "r"))) {
+  //   /* If it is full name. */
+  //   fclose(fp);
+  //   memcpy(fullpath, filename, strlen(filename) + 1);
+  // } else {
+  //   /* If it is not then search for environmental variables. */
+  //   char* envvar = getenv("PATH");
+  //   char* token;
+  //   char* saveptr;
+  //   bool flag = false;
+  //   for (char* str = envvar; ; str = NULL) {
+    
+  //     token = strtok_r(str, ":", &saveptr);
+  //     if (token == NULL) {
+  //       break;
+  //     }
+
+  //     memcpy(fullpath, token, strlen(token) + 1);
+  //     fullpath[strlen(token)] = '/';
+  //     fullpath[strlen(token) + 1] = '\0';
+  //     strcat(fullpath, filename); // contcatenate the path and filename
+  //     if ((fp = fopen(fullpath, "r"))) {
+  //       fclose(fp);
+  //       flag = true;
+  //       break;
+  //     }
+  //   }
+  //   if (!flag) {
+  //     printf("In execution: your program doesn't exist\n");
+  //   }
+  // }
+
+  int length = tokens_get_length(tokens);
+  int argc = 0;
+  char* argv[length + 1];  // store the arguments
+  int in = 0, out = 1;
+
+  /* Initialize the argv for execv. */
+  for (int i = 0; i < length; i++) {
+    char* arg = tokens_get_token(tokens, i);
+
+    if (strcmp(arg, "<") == 0) {
+      /* If it is an input redirection character. */
+      arg = tokens_get_token(tokens, ++i);
+      in = open(arg, O_RDONLY);
+      
+    } else if (strcmp(arg, ">") == 0) {
+      /* If it is an output redirection character. */
+      arg = tokens_get_token(tokens, ++i);
+      out = creat(arg, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    } else {
+      /* When it is a normal parameter. */
+      argv[argc] = arg;
+      argc++;
+    }
+  }
+  argv[argc] = NULL;
+
+  // debug
+  for (int i = 0; i < argc; i++) {
+    printf("%s\n", argv[i]);
+  }
+
+  program(argv, in, out);
+
+  return 0;
 }
 
 /* Looks up the built-in command, if it exists. */
