@@ -136,6 +136,9 @@ int program(char** argv, int in, int out, int* group_id) {
     int child_pid = getpid();
     setpgid(child_pid, *group_id); // put this process into the process group.
 
+    /* Put the program in the foreground. */
+    tcsetpgrp(shell_terminal, *group_id);
+
     /* Return signal handler. */
     signal(SIGINT, SIG_DFL);
     signal(SIGQUIT, SIG_DFL);
@@ -145,9 +148,6 @@ int program(char** argv, int in, int out, int* group_id) {
     signal(SIGCONT, SIG_DFL);
     signal(SIGTTIN, SIG_DFL);
     signal(SIGTTOU, SIG_DFL);
-
-    /* Put the program in the foreground. */
-    tcsetpgrp(shell_terminal, *group_id);
 
     /* Performing the redirection. */
     if (in != 0) {
