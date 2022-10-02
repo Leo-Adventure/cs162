@@ -133,15 +133,21 @@ int program(char** argv, int in, int out, int* group_id) {
       /* We haven't set the child process to be a seperate group. */
       *group_id = getpid(); // let the current pid to be the group id.
     }
-    // int ppid = getppid();
     int child_pid = getpid();
     setpgid(child_pid, *group_id); // put this process into the process group.
-    printf("child pid is: %i, child pgid is: %i\n", child_pid, *group_id);
-    // printf("parent pid is: %i\n", ppid);
-    tcsetpgrp(shell_terminal, *group_id);
-    printf("%i\n", getpgrp());
+
+    /* Return signal handler. */
     signal(SIGINT, SIG_DFL);
+    signal(SIGQUIT, SIG_DFL);
+    signal(SIGKILL, SIG_DFL);
+    signal(SIGTERM, SIG_DFL);
+    signal(SIGTSTP, SIG_DFL);
+    signal(SIGCONT, SIG_DFL);
+    signal(SIGTTIN, SIG_DFL);
     signal(SIGTTOU, SIG_DFL);
+
+    /* Put the program in the foreground. */
+    tcsetpgrp(shell_terminal, *group_id);
 
     /* Performing the redirection. */
     if (in != 0) {
@@ -152,8 +158,12 @@ int program(char** argv, int in, int out, int* group_id) {
     }
 
     execv(find_path(argv[0]), argv);
+    /* Your program shouldn't reach this line. */
+    printf("In program: %s failed\n", argv[0]);
+    exit(-1);
   } else {
     wait(&status);
+    /* Get the control back. */
     tcsetpgrp(shell_terminal, shell_pgid);
     return status;
   }
@@ -205,11 +215,6 @@ int execute(struct tokens* tokens) {
   }
   argv[argc] = NULL;
 
-  // // debug
-  // for (int i = 0; i < argc; i++) {
-  //   printf("%s\n", argv[i]);
-  // }
-
   program(argv, in, out, group_id);
   free(group_id);
 
@@ -254,6 +259,12 @@ int main(unused int argc, unused char* argv[]) {
   init_shell();
 
   signal(SIGINT, SIG_IGN);
+  signal(SIGQUIT, SIG_IGN);
+  signal(SIGKILL, SIG_IGN);
+  signal(SIGTERM, SIG_IGN);
+  signal(SIGTSTP, SIG_IGN);
+  signal(SIGCONT, SIG_IGN);
+  signal(SIGTTIN, SIG_IGN);
   signal(SIGTTOU, SIG_IGN);
 
   static char line[4096];
