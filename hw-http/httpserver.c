@@ -46,11 +46,14 @@ void serve_file(int fd, char* path) {
     exit(errno);
   }
 
-  int file_size = lseek(file_fd, 0, SEEK_END);
-  lseek(file_fd, 0, SEEK_SET);
+  // int file_size = lseek(file_fd, 0, SEEK_END);
+  // lseek(file_fd, 0, SEEK_SET);
+  struct stat statbuf;
+  stat(path, &statbuf);
   char file_size_str[10];
 
-  snprintf(file_size_str, 10, "%d", file_size);
+  // snprintf(file_size_str, 10, "%d", file_size);
+  snprintf(file_size_str, 10, "%ld", statbuf.st_size);
 
   http_start_response(fd, 200);
   http_send_header(fd, "Content-Type", http_get_mime_type(path));
@@ -86,6 +89,27 @@ void serve_directory(int fd, char* path) {
    * send a string containing a properly formatted HTML. (Hint: the http_format_href()
    * function in libhttp.c may be useful here)
    */
+  struct dirent* pDirent;
+  DIR* pDir;
+
+  pDir = opendir(path);
+  // printf("Path is %s", path);
+  if (pDir == NULL) {
+    perror("failed to open directory");
+    exit(errno);
+  }
+
+  while ((pDirent = readdir(pDir)) != NULL) {
+    // printf("%s\n", pDirent->d_name);
+    int length = strlen("<a href=\"//\"></a><br/>") + 
+                strlen(path) + strlen(pDirent->d_name) * 2 + 1;
+    char link_buf[length];
+
+    http_format_href(link_buf, path, pDirent->d_name);  // Get href format
+    // printf("%s\n", link_buf);
+    write(fd, link_buf, length);
+  }
+  closedir(pDir);
 
   /* PART 3 END */
 }
@@ -140,17 +164,36 @@ void handle_files_request(int fd) {
    */
 
   /* PART 2 & 3 BEGIN */
-  // printf("%s\n", path);
-  if (access(path, F_OK) == 0) {
-    serve_file(fd, path);
-  } else {
+
+  struct stat statbuf;
+  if (stat(path, &statbuf) != 0) {
     http_start_response(fd, 404);
     http_send_header(fd, "Content-Type", "text/html");
     http_end_headers(fd);
-  }
+  } else if (S_ISREG(statbuf.st_mode)) {
+    /* Path is a regular file. */
+    serve_file(fd, path);
+  } else if (S_ISDIR(statbuf.st_mode)) {
+    /* Path is a direction. */
+    printf("here\n");
+    int length = strlen(path) + strlen("/index.html") + 1;
+    char index_path[length];
+    http_format_index(index_path, path);
+    printf("%s\n", index_path);
+
+    if (access(index_path, F_OK) == 0) {
+      /* If there exists a index.html file. */
+      printf("file exists\n");
+      serve_file(fd, index_path);
+    } else {
+      /* index.html doesn't exist. */
+      printf("file doesn't exist\n");
+      serve_directory(fd, path);
+    }
+  } 
 
   /* PART 2 & 3 END */
-
+  free(path);
   close(fd);
   return;
 }
