@@ -282,6 +282,16 @@ void init_thread_pool(int num_threads, void (*request_handler)(int)) {
 }
 #endif
 
+struct serve_client_arg {
+  int client_socket_number;
+  void (*request_handler)(int);
+};
+
+void serve_client(void* arg_) {
+  struct serve_client_arg* arg = (struct serve_client_srg *)arg_;
+  arg->request_handler(arg->client_socket_number);
+}
+
 /*
  * Opens a TCP stream socket on all interfaces with port number PORTNO. Saves
  * the fd number of the server socket in *socket_number. For each accepted
@@ -389,8 +399,9 @@ void serve_forever(int* socket_number, void (*request_handler)(int)) {
 
     if (pid == 0) {
       /* Child process. */
-      close(socket_number);
+      close(*socket_number);
       request_handler(client_socket_number);
+      exit(0);
     } else if (pid > 0) {
       /* Parent process. */
       close(client_socket_number);
@@ -413,6 +424,12 @@ void serve_forever(int* socket_number, void (*request_handler)(int)) {
      */
 
     /* PART 6 BEGIN */
+    pthread_t tid;
+    struct serve_client_arg* arg = malloc(sizeof(struct serve_client_arg));
+    arg->client_socket_number = client_socket_number;
+    arg->request_handler = request_handler;
+
+    pthread_create(&tid, NULL, serve_client, (void *)arg);
 
     /* PART 6 END */
 #elif POOLSERVER
