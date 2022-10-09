@@ -383,6 +383,22 @@ void serve_forever(int* socket_number, void (*request_handler)(int)) {
 
     /* PART 5 BEGIN */
 
+    pid_t pid;
+
+    pid = fork();
+
+    if (pid == 0) {
+      /* Child process. */
+      close(socket_number);
+      request_handler(client_socket_number);
+    } else if (pid > 0) {
+      /* Parent process. */
+      close(client_socket_number);
+    } else {
+      perror("failed to fork a child process");
+      exit(errno);
+    }
+
     /* PART 5 END */
 
 #elif THREADSERVER
