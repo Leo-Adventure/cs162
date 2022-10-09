@@ -37,7 +37,6 @@ int server_proxy_port;
  */
 void serve_file(int fd, char* path) {
 
-  /* TODO: PART 2 */
   /* PART 2 BEGIN */
 
   int file_fd = open(path, O_RDONLY);
@@ -65,7 +64,6 @@ void serve_file(int fd, char* path) {
   // int buf_size = 0;
 
   while (read(file_fd, &buffer, sizeof(buffer))) {
-    // printf("%s", buffer);
     write(fd, &buffer, sizeof(buffer));
   }
 
@@ -79,34 +77,22 @@ void serve_directory(int fd, char* path) {
   http_send_header(fd, "Content-Type", http_get_mime_type(".html"));
   http_end_headers(fd);
 
-  /* TODO: PART 3 */
   /* PART 3 BEGIN */
-
-  // TODO: Open the directory (Hint: opendir() may be useful here)
-
-  /**
-   * TODO: For each entry in the directory (Hint: look at the usage of readdir() ),
-   * send a string containing a properly formatted HTML. (Hint: the http_format_href()
-   * function in libhttp.c may be useful here)
-   */
   struct dirent* pDirent;
   DIR* pDir;
 
   pDir = opendir(path);
-  // printf("Path is %s", path);
   if (pDir == NULL) {
     perror("failed to open directory");
     exit(errno);
   }
 
   while ((pDirent = readdir(pDir)) != NULL) {
-    // printf("%s\n", pDirent->d_name);
     int length = strlen("<a href=\"//\"></a><br/>") + 
                 strlen(path) + strlen(pDirent->d_name) * 2 + 1;
     char link_buf[length];
 
     http_format_href(link_buf, path, pDirent->d_name);  // Get href format
-    // printf("%s\n", link_buf);
     write(fd, link_buf, length);
   }
   closedir(pDir);
