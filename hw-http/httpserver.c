@@ -184,27 +184,6 @@ void handle_files_request(int fd) {
   return;
 }
 
-/* Argument passing through the pthread_create. */
-struct sockets {
-  int read_fd;
-  int write_fd;
-  // May be we need a buffer for every process?
-};
-
-void forward_message(void *sockets_) {
-  struct sockets* sockets = (struct sockets *)sockets_;
-  int read_fd = sockets->read_fd;
-  int write_fd = sockets->write_fd;
-  char buffer[1024];
-
-  while (read(read_fd, buffer, sizeof(buffer)) != 0) {
-    printf("%s", buffer);
-    write(write_fd, buffer, sizeof(buffer));
-  }
-
-  pthread_exit(0);
-}
-
 /*
  * Opens a connection to the proxy target (hostname=server_proxy_hostname and
  * port=server_proxy_port) and relays traffic to/from the stream fd and the
@@ -268,16 +247,7 @@ void handle_proxy_request(int fd) {
 
   /* TODO: PART 4 */
   /* PART 4 BEGIN */
-  pid_t client2proxy_pid, proxy2client_pid;
-  struct sockets client2proxy, proxy2client;
-  client2proxy.read_fd = fd, client2proxy.write_fd = target_fd;
-  proxy2client.read_fd = target_fd, client2proxy.write_fd = fd;
-
-  pthread_create(&client2proxy_pid, NULL, forward_message, (void *)&client2proxy);
-  pthread_create(&proxy2client_pid, NULL, forward_message, (void *)&proxy2client);
-
-  close(fd);
-  close(target_fd);
+  
   /* PART 4 END */
 }
 
