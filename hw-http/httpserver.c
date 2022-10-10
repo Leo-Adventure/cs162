@@ -267,8 +267,10 @@ void* handle_clients(void* void_request_handler) {
   /* TODO: PART 7 */
   /* PART 7 BEGIN */
 
-  int client_fd = wq_pop(&work_queue);
-  request_handler(client_fd);
+  while (1) {
+    int client_fd = wq_pop(&work_queue);
+    request_handler(client_fd);
+  }
 
   /* PART 7 END */
 }
