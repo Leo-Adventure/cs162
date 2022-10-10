@@ -18,6 +18,8 @@
 #include "libhttp.h"
 #include "wq.h"
 
+#define LIBHTTP_REQUEST_MAX_SIZE 1024
+
 /*
  * Global configuration variables.
  * You need to use these in your implementation of handle_files_request and
@@ -133,7 +135,7 @@ void handle_files_request(int fd) {
     return;
   }
 
-  printf("%s\n", request->method);
+  // printf("%s\n", request->method);
 
   /* Remove beginning `./` */
   char* path = malloc(2 + strlen(request->path) + 1);
@@ -230,7 +232,7 @@ void handle_proxy_request(int fd) {
 
   char* dns_address = target_dns_entry->h_addr_list[0];
 
-  printf("%s\n", dns_address);
+  // printf("%s\n", dns_address);
 
   // Connect to the proxy target.
   memcpy(&target_address.sin_addr, dns_address, sizeof(target_address.sin_addr));
@@ -251,19 +253,39 @@ void handle_proxy_request(int fd) {
 
   /* TODO: PART 4 */
   /* PART 4 BEGIN */
+  // struct http_request* request = http_request_parse(fd);
 
-  char read_buffer[1024], write_buffer[1024];
+  // printf("%s\n", request->method);
 
-  while (read(fd, read_buffer, sizeof(read_buffer)) != 0) {
-    write(target_fd, read_buffer, sizeof(read_buffer));
-  }
 
-  while (read(target_fd, write_buffer, sizeof(write_buffer))) {
-    write(fd, write_buffer, sizeof(write_buffer));
-  }
+  // char read_buffer[1024], write_buffer[1024];
+  // int read_bytes;
 
-  close(fd);
+  // while ((read_bytes = read(fd, read_buffer, sizeof(read_buffer))) != 0) {
+  //   printf("%s", read_buffer);
+  //   write(target_fd, read_buffer, read_bytes);
+  // }
+
+  // while ((read_bytes = read(target_fd, write_buffer, sizeof(write_buffer))) != 0) {
+  //   printf("%s", write_buffer);
+  //   write(fd, write_buffer, read_bytes);
+  // }
+
+  // close(fd);
+  // close(target_fd);
+
+  char read_buffer[1024];
+
+  int bytes_read;
+  bytes_read = read(fd, read_buffer, 1024);
+  write(target_fd, read_buffer, bytes_read);
+
+  bytes_read = read(target_fd, read_buffer, 1024);
+  write(fd, read_buffer, bytes_read);
+
   close(target_fd);
+  close(fd);
+
   /* PART 4 END */
 }
 
