@@ -280,6 +280,7 @@ void init_thread_pool(int num_threads, void (*request_handler)(int)) {
 
   /* TODO: PART 7 */
   /* PART 7 BEGIN */
+  wq_init(&work_queue);
   pthread_t tid[num_threads];
   for (int i = 0; i < num_threads; i++) {
     // tid[i] = wq_pop(&work_queue);
