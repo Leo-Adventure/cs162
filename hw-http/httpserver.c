@@ -280,8 +280,9 @@ void handle_proxy_request(int fd) {
   bytes_read = read(fd, read_buffer, 1024);
   write(target_fd, read_buffer, bytes_read);
 
-  bytes_read = read(target_fd, read_buffer, 1024);
-  write(fd, read_buffer, bytes_read);
+  while ((bytes_read = read(target_fd, read_buffer, 1024)) != 0) {
+    write(fd, read_buffer, bytes_read);
+  }
 
   close(target_fd);
   close(fd);
