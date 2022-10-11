@@ -188,6 +188,54 @@ void handle_files_request(int fd) {
   return;
 }
 
+int rw = 0;
+int waiting = 0;
+pthread_mutex_t rw_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t rw_cv = PTHREAD_COND_INITIALIZER;
+
+struct forward_arg {
+  int read_fd;
+  int write_fd;
+  char buffer[1024];
+};
+
+void *forward(void *arg_) {
+  struct forward_arg* arg = (void *)arg_;
+  // while (1) {
+  //   pthread_mutex_lock(&rw_lock);
+  //   while (rw) {
+  //     waiting++;
+  //     pthread_cond_wait(&rw_cv, &rw_lock);
+  //     waiting--;
+  //   }
+  //   rw++;
+  //   pthread_mutex_unlock(&rw_lock);
+
+    size_t bytes_read;
+
+    // bytes_read = read(arg->read_fd, arg->buffer, sizeof(arg->buffer));
+    // printf("read: %d\n", bytes_read);
+    // write(arg->write_fd, arg->buffer, bytes_read);
+
+    while ((bytes_read = read(arg->read_fd, arg->buffer, sizeof(arg->buffer))) != 0) {
+      write(arg->write_fd, arg->buffer, bytes_read);
+      printf("I wrote %d\n", bytes_read);
+    }
+
+    printf("I read 0\n");
+
+  //   pthread_mutex_lock(&rw_lock);
+  //   rw--;
+  //   printf("%d\n", waiting);
+  //   if (waiting > 0) {
+  //     pthread_cond_signal(&rw_cv);
+      
+  //   }
+  //   pthread_mutex_unlock(&rw_lock);
+  // }
+  pthread_exit(0);
+}
+
 /*
  * Opens a connection to the proxy target (hostname=server_proxy_hostname and
  * port=server_proxy_port) and relays traffic to/from the stream fd and the
@@ -253,39 +301,35 @@ void handle_proxy_request(int fd) {
 
   /* TODO: PART 4 */
   /* PART 4 BEGIN */
-  // struct http_request* request = http_request_parse(fd);
+  // char read_buffer[1024];
 
-  // printf("%s\n", request->method);
+  // int bytes_read;
+  
+  // bytes_read = read(fd, read_buffer, 1024);
+  // write(target_fd, read_buffer, bytes_read);
 
-
-  // char read_buffer[1024], write_buffer[1024];
-  // int read_bytes;
-
-  // while ((read_bytes = read(fd, read_buffer, sizeof(read_buffer))) != 0) {
-  //   printf("%s", read_buffer);
-  //   write(target_fd, read_buffer, read_bytes);
+  // while ((bytes_read = read(target_fd, read_buffer, 1024)) != 0) {
+  //   write(fd, read_buffer, bytes_read);
   // }
 
-  // while ((read_bytes = read(target_fd, write_buffer, sizeof(write_buffer))) != 0) {
-  //   printf("%s", write_buffer);
-  //   write(fd, write_buffer, read_bytes);
-  // }
-
-  // close(fd);
   // close(target_fd);
+  // close(fd);
 
-  char read_buffer[1024];
+  pthread_t tid1, tid2;
+  struct forward_arg client2proxy, proxy2client;
 
-  int bytes_read;
-  bytes_read = read(fd, read_buffer, 1024);
-  write(target_fd, read_buffer, bytes_read);
+  client2proxy.read_fd = fd, client2proxy.write_fd = target_fd;
+  memset(client2proxy.buffer, 0, sizeof(client2proxy.buffer));
+  proxy2client.read_fd = target_fd, proxy2client.write_fd = fd;
+  memset(proxy2client.buffer, 0, sizeof(proxy2client.buffer));
 
-  while ((bytes_read = read(target_fd, read_buffer, 1024)) != 0) {
-    write(fd, read_buffer, bytes_read);
-  }
+  pthread_create(&tid1, NULL, forward, (void *)&client2proxy);
+  pthread_create(&tid2, NULL, forward, (void *)&proxy2client);
+  pthread_join(tid1, NULL);
+  pthread_join(tid2, NULL);
 
-  close(target_fd);
   close(fd);
+  close(target_fd);
 
   /* PART 4 END */
 }
@@ -309,7 +353,10 @@ void* handle_clients(void* void_request_handler) {
   while (1) {
     int client_fd = wq_pop(&work_queue);
     request_handler(client_fd);
+    printf("Handle finished\n");
   }
+
+  printf("Leave\n");
 
   /* PART 7 END */
 }
