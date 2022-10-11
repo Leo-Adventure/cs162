@@ -1,1 +1,4 @@
 Name|Autograder ID (XXX)|Score|Comment
+Baizhou Zhang|444|43|Although he was busy with some other things at first, he worked hard in this project and helped me in design doc and coding. He implemented all file syscalls on his own and helped me with checking memory leak after I implemented Argument Passing to prevent potential memory leak. Besides, as for design document, we discussed about the logic of Pint OS and some ideas about how to design this project, then he designed the File Syscall part.
+Yixuan Yang|437|10|He designed one test case, wrote the design document and implement the test case in coding part.
+Haopeng Chen|450|7|He implement a test case.
