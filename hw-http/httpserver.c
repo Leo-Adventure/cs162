@@ -201,38 +201,13 @@ struct forward_arg {
 
 void *forward(void *arg_) {
   struct forward_arg* arg = (void *)arg_;
-  // while (1) {
-  //   pthread_mutex_lock(&rw_lock);
-  //   while (rw) {
-  //     waiting++;
-  //     pthread_cond_wait(&rw_cv, &rw_lock);
-  //     waiting--;
-  //   }
-  //   rw++;
-  //   pthread_mutex_unlock(&rw_lock);
 
-    size_t bytes_read;
+  size_t bytes_read;
 
-    // bytes_read = read(arg->read_fd, arg->buffer, sizeof(arg->buffer));
-    // printf("read: %d\n", bytes_read);
-    // write(arg->write_fd, arg->buffer, bytes_read);
+  while ((bytes_read = read(arg->read_fd, arg->buffer, sizeof(arg->buffer))) != 0) {
+    write(arg->write_fd, arg->buffer, bytes_read);
+  }
 
-    while ((bytes_read = read(arg->read_fd, arg->buffer, sizeof(arg->buffer))) != 0) {
-      write(arg->write_fd, arg->buffer, bytes_read);
-      printf("I wrote %d\n", bytes_read);
-    }
-
-    printf("I read 0\n");
-
-  //   pthread_mutex_lock(&rw_lock);
-  //   rw--;
-  //   printf("%d\n", waiting);
-  //   if (waiting > 0) {
-  //     pthread_cond_signal(&rw_cv);
-      
-  //   }
-  //   pthread_mutex_unlock(&rw_lock);
-  // }
   pthread_exit(0);
 }
 
@@ -280,8 +255,6 @@ void handle_proxy_request(int fd) {
 
   char* dns_address = target_dns_entry->h_addr_list[0];
 
-  // printf("%s\n", dns_address);
-
   // Connect to the proxy target.
   memcpy(&target_address.sin_addr, dns_address, sizeof(target_address.sin_addr));
   int connection_status =
@@ -301,20 +274,6 @@ void handle_proxy_request(int fd) {
 
   /* TODO: PART 4 */
   /* PART 4 BEGIN */
-  // char read_buffer[1024];
-
-  // int bytes_read;
-  
-  // bytes_read = read(fd, read_buffer, 1024);
-  // write(target_fd, read_buffer, bytes_read);
-
-  // while ((bytes_read = read(target_fd, read_buffer, 1024)) != 0) {
-  //   write(fd, read_buffer, bytes_read);
-  // }
-
-  // close(target_fd);
-  // close(fd);
-
   pthread_t tid1, tid2;
   struct forward_arg client2proxy, proxy2client;
 
