@@ -86,31 +86,52 @@ static void* syscall_sbrk(intptr_t increment) {
     return t->brk;
   } else if (increment > 0) {
     /* At first, we need to judge whether to allocate new page. */
+    bool success = true;
     uint8_t* next_page = pg_round_up(t->brk);
     int to_page_up = next_page - t->brk;
     
     if (increment > to_page_up) {
+      /* If exceed user virtual address, then must cause an error. */
+      if (prevbrk + increment > PHYS_BASE || prevbrk + increment < 0) {
+        return (void *)-1;
+      }
       /* Cross the page border, need to allocate new pages. */
+      int i;
       int new_pages = ((increment - to_page_up) + PGSIZE - 1) / PGSIZE;
+      /* Integer overflow, which means increment is too large. */
 
-      for (int i = 0; i < new_pages; i++) {
+      for (i = 0; i < new_pages; i++) {
         uint8_t* new_page = palloc_get_page(PAL_USER | PAL_ZERO);
         if (new_page == NULL) {
-          printf("Failed to allocate new page\n");
-          return NULL;
+          success = false;
+          break;
         }
 
         if (!pagedir_set_page(t->pagedir, next_page, new_page, true)) {
           palloc_free_page(new_page);
-          printf("failed to install new page\n");
-          return NULL;
+          success = false;
+          break;
         }
 
         next_page += PGSIZE;
       }
 
-      t->brk += increment;
-      return prevbrk;
+      if (!success) {
+        /* Undo every pages. */
+        next_page = pg_round_up(t->brk);
+
+        for (int j = 0; j < i; j++) {
+          void* paddr = pagedir_get_page(t->pagedir, next_page);
+          pagedir_clear_page(t->pagedir, next_page);
+          palloc_free_page(paddr);
+          next_page += PGSIZE;
+        }
+
+        return (void*) -1;
+      } else {
+        t->brk += increment;
+        return prevbrk;
+      }
     } else {
       /* Don't need to allocate new pages. */
       t->brk += increment;
@@ -127,7 +148,7 @@ static void* syscall_sbrk(intptr_t increment) {
 
       for (int i = 0; i < free_pages; i++) {
         void* paddr = pagedir_get_page(t->pagedir, prev_page);
-        
+
         pagedir_clear_page(t->pagedir, prev_page);
         palloc_free_page(paddr);
 
