@@ -80,15 +80,17 @@ static void syscall_close(int fd) {
 
 static void* syscall_sbrk(intptr_t increment) {
   struct thread* t = thread_current();
+  intptr_t prevbrk = t->brk;
+
   if (increment == 0) {
     return t->brk;
   } else if (increment > 0) {
     /* At first, we need to judge whether to allocate new page. */
     uint8_t* next_page = pg_round_up(t->brk);
     int to_page_up = next_page - t->brk;
+    
     if (increment > to_page_up) {
       /* Cross the page border, need to allocate new pages. */
-      
       int new_pages = ((increment - to_page_up) + PGSIZE - 1) / PGSIZE;
 
       for (int i = 0; i < new_pages; i++) {
@@ -107,13 +109,36 @@ static void* syscall_sbrk(intptr_t increment) {
         next_page += PGSIZE;
       }
 
-      intptr_t prevbrk = t->brk;
       t->brk += increment;
       return prevbrk;
     } else {
       /* Don't need to allocate new pages. */
       t->brk += increment;
-      return t->brk;
+      return prevbrk;
+    }
+  } else {
+    uint8_t* prev_page = pg_round_down(t->brk);
+    int to_page_down = prev_page - t->brk;
+
+    if (to_page_down >= increment) {
+      /* We need to deallocate pages. */
+      int free_pages = ((to_page_down - increment) + PGSIZE - 1) / PGSIZE;
+      free_pages = (free_pages == 0)? 1: free_pages;
+
+      for (int i = 0; i < free_pages; i++) {
+        void* paddr = pagedir_get_page(t->pagedir, prev_page);
+        
+        pagedir_clear_page(t->pagedir, prev_page);
+        palloc_free_page(paddr);
+
+        prev_page -= PGSIZE;
+      }
+
+      t->brk += increment;
+      return prevbrk;
+    } else {
+      t->brk += increment;
+      return prevbrk;
     }
   }
 }
