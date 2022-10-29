@@ -5,8 +5,10 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/palloc.h"
 #include "filesys/filesys.h"
 #include "filesys/file.h"
+#include "userprog/pagedir.h"
 
 static void syscall_handler(struct intr_frame*);
 
@@ -76,6 +78,46 @@ static void syscall_close(int fd) {
   }
 }
 
+static void* syscall_sbrk(intptr_t increment) {
+  struct thread* t = thread_current();
+  if (increment == 0) {
+    return t->brk;
+  } else if (increment > 0) {
+    /* At first, we need to judge whether to allocate new page. */
+    uint8_t* next_page = pg_round_up(t->brk);
+    int to_page_up = next_page - t->brk;
+    if (increment > to_page_up) {
+      /* Cross the page border, need to allocate new pages. */
+      
+      int new_pages = ((increment - to_page_up) + PGSIZE - 1) / PGSIZE;
+
+      for (int i = 0; i < new_pages; i++) {
+        uint8_t* new_page = palloc_get_page(PAL_USER | PAL_ZERO);
+        if (new_page == NULL) {
+          printf("Failed to allocate new page\n");
+          return NULL;
+        }
+
+        if (!pagedir_set_page(t->pagedir, next_page, new_page, true)) {
+          palloc_free_page(new_page);
+          printf("failed to install new page\n");
+          return NULL;
+        }
+
+        next_page += PGSIZE;
+      }
+
+      intptr_t prevbrk = t->brk;
+      t->brk += increment;
+      return prevbrk;
+    } else {
+      /* Don't need to allocate new pages. */
+      t->brk += increment;
+      return t->brk;
+    }
+  }
+}
+
 static void syscall_handler(struct intr_frame* f) {
   uint32_t* args = (uint32_t*)f->esp;
   struct thread* t = thread_current();
@@ -109,6 +151,11 @@ static void syscall_handler(struct intr_frame* f) {
     case SYS_CLOSE:
       validate_buffer_in_user_region(&args[1], sizeof(uint32_t));
       syscall_close((int)args[1]);
+      break;
+
+    case SYS_SBRK:
+      validate_buffer_in_user_region(&args[1], sizeof(intptr_t));
+      f->eax = syscall_sbrk((intptr_t)args[1]);
       break;
 
     default:
