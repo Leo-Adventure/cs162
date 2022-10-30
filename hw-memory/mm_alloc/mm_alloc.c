@@ -115,9 +115,26 @@ void* mm_malloc(size_t size) {
 }
 
 void* mm_realloc(void* ptr, size_t size) {
-  //TODO: Implement realloc
+  /* Corner case. */
+  if (ptr == NULL) {
+    return mm_malloc(size);
+  }
+  if (size == 0) {
+    mm_free(ptr);
+    return NULL;
+  }
 
-  return NULL;
+  /* If the new size is smaller than the previous. */
+  if (size <= ((struct block*)ptr)->size) {
+    split_heap(size, ptr);
+    return ((struct block*)ptr)->data;
+  } else {
+    mm_free(ptr);
+    struct block* p = mm_malloc(size);
+    memset(p->data, 0, size);
+    memcpy(p->data, ((struct block*)ptr)->data, ((struct block*)ptr)->size);
+    return p->data
+  }
 }
 
 void mm_free(void* ptr) {
