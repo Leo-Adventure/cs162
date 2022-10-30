@@ -17,6 +17,10 @@ void* extend_heap(size_t size, struct block* prev) {
     return NULL;
   }
 
+  if (prev) {
+    prev->next = block;
+  }
+  
   block->prev = prev;
   block->next = NULL;
   block->free = 0;
@@ -99,7 +103,7 @@ void* mm_malloc(size_t size) {
     }
 
     /* If there is no free block in the heap. */
-    ptr = sbrk(META_SIZE + size);
+    ptr = extend_heap(size, prev);
     if (ptr == NULL) {
       return NULL;
     }
