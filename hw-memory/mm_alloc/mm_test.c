@@ -37,7 +37,7 @@ int main() {
   void* block2 = mm_malloc(0x10);
   void* block3 = mm_realloc(block1, 0x20);
   void* block4 = mm_malloc(0x10);
-  void* block5 = mm_realloc(block3, (size_t)(0xffffffff));
+  void* block5 = mm_realloc(block3, (size_t)(0x63000000));
   assert(block1 != NULL);
   assert(block2 != NULL);
   assert(block3 != NULL);
