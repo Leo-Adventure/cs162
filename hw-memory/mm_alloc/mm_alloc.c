@@ -93,9 +93,9 @@ void* mm_malloc(size_t size) {
     /* Iterate the heap to find a free block. */
     while (ptr != NULL) {
       /* If it is a free block. */
-      if (ptr->free && ptr->size >= size) {
-        split_heap(size, ptr);
-        return ptr->data;
+      if (prev->free && prev->size >= size) {
+        split_heap(size, prev);
+        return prev->data;
       }
 
       prev = ptr;

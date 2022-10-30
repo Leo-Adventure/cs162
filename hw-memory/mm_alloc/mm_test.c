@@ -39,8 +39,9 @@ int main() {
   assert(block2 != NULL);
   // data[0] = 0x162;
   mm_free(block1);
-  mm_free(block2);
-  void* block = mm_malloc(200);
-  assert(block == block1);
+  void* block3 = mm_malloc(20);
+  void* block4 = mm_malloc(20);
+  assert(block3 == block1);
+  assert(block4 < block2);
   puts("malloc test successful!");
 }
