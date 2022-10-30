@@ -44,12 +44,12 @@ void split_heap(size_t size, struct block* block) {
     block->free = 0;
     block->size = size;
 
-    memset(block->data, 0, size);
+    // memset(block->data, 0, size);
   } else {
     block->free = 0;
     block->size = size;
 
-    memset(block->data, 0, size);
+    // memset(block->data, 0, size);
   }
 }
 
@@ -89,6 +89,7 @@ void* mm_malloc(size_t size) {
     if (ptr == NULL) {
       if (prev->free && prev->size >= size) {
         split_heap(size, prev);
+        memset(prev->data, 0, size);
         return prev->data;
       }
     }
@@ -98,6 +99,7 @@ void* mm_malloc(size_t size) {
       /* If it is a free block. */
       if (prev->free && prev->size >= size) {
         split_heap(size, prev);
+        memset(prev->data, 0, size);
         return prev->data;
       }
 
@@ -131,6 +133,9 @@ void* mm_realloc(void* ptr, size_t size) {
   } else {
     mm_free(ptr);
     void* p = mm_malloc(size);
+    if (p == (void*)-1) {
+      return NULL;
+    }
     memset(p, 0, size);
     memcpy(p, ptr, ((struct block*)(ptr - META_SIZE))->size);
     return p;
