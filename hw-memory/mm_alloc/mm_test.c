@@ -33,9 +33,11 @@ static void load_alloc_functions() {
 int main() {
   load_alloc_functions();
 
-  int* data = mm_malloc(sizeof(int));
-  assert(data != NULL);
-  data[0] = 0x162;
-  mm_free(data);
+  int* data1 = mm_malloc(sizeof(int));
+  assert(data1 != NULL);
+  data1[0] = 0x162;
+  mm_free(data1);
+  int* data2 = mm_malloc(sizeof(int));
+  assert(data1 == data2);
   puts("malloc test successful!");
 }

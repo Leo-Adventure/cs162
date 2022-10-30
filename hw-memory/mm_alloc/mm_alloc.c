@@ -45,6 +45,17 @@ void* split_heap(size_t size, struct block* block) {
   }
 }
 
+void coalease_heap(struct block* block) {
+  if (block->next && block->next->free) {
+    block->size = block->size + META_SIZE + block->next->size;
+    block->next = block->next->next;
+  }
+  if (block->prev && block->prev->free) {
+    block->prev->size = block->prev->size + META_SIZE + block->size;
+    block->prev->next = block->next;
+  }
+}
+
 void* mm_malloc(size_t size) {
   if (size == 0) {
     return NULL;
@@ -66,7 +77,7 @@ void* mm_malloc(size_t size) {
     /* Only one block in the heap. */
     if (ptr == NULL) {
       if (prev->free && prev->size >= size) {
-        split_heap(prev, size);
+        split_heap(size, prev);
         return prev->data;
       }
     }
@@ -75,7 +86,7 @@ void* mm_malloc(size_t size) {
     while (ptr != NULL) {
       /* If it is a free block. */
       if (ptr->free && ptr->size >= size) {
-        split_heap(ptr, size);
+        split_heap(size, ptr);
         return ptr->data;
       }
 
@@ -99,5 +110,12 @@ void* mm_realloc(void* ptr, size_t size) {
 }
 
 void mm_free(void* ptr) {
-  //TODO: Implement free
+  if (ptr == NULL) {
+    return;
+  }
+  struct block* block = (struct block*)(ptr - META_SIZE);
+  block->free = 1;
+
+  coalesce_heap(block);
+  return;
 }
