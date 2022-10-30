@@ -34,16 +34,13 @@ int main() {
   load_alloc_functions();
 
   void* block1 = mm_malloc(0x10);
-  void* block2 = mm_malloc(0x20);
-  void* block3 = mm_malloc(0x30);
+  void* block2 = mm_malloc(0x10);
+  void* block3 = mm_realloc(block1, 0x20);
+  void* block4 = mm_malloc(0x10);
   assert(block1 != NULL);
   assert(block2 != NULL);
   assert(block3 != NULL);
-  // data[0] = 0x162;
-  mm_free(block3);
-  mm_free(block1);
-  mm_free(block2);
-  void* block = mm_malloc(0x10 + 0x20 + 0x30 + 2*0x20);
-  assert(block == block1);
+  assert(block4 != NULL);
+  assert(block1 == block4);
   puts("malloc test successful!");
 }

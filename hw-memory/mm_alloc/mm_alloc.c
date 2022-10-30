@@ -125,15 +125,15 @@ void* mm_realloc(void* ptr, size_t size) {
   }
 
   /* If the new size is smaller than the previous. */
-  if (size <= ((struct block*)ptr)->size) {
-    split_heap(size, ptr);
-    return ((struct block*)ptr)->data;
+  if (size <= ((struct block*)(ptr - META_SIZE))->size) {
+    split_heap(size, ptr - META_SIZE);
+    return ptr;
   } else {
     mm_free(ptr);
-    struct block* p = mm_malloc(size);
-    memset(p->data, 0, size);
-    memcpy(p->data, ((struct block*)ptr)->data, ((struct block*)ptr)->size);
-    return p->data
+    void* p = mm_malloc(size);
+    memset(p, 0, size);
+    memcpy(p, ptr, ((struct block*)(ptr - META_SIZE))->size);
+    return p;
   }
 }
 
