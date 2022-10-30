@@ -61,6 +61,9 @@ void coalesce_heap(struct block* block) {
   if (block->prev && block->prev->free) {
     block->prev->size = block->prev->size + META_SIZE + block->size;
     block->prev->next = block->next;
+    if (block->next) {
+      block->next->prev = block->prev;
+    }
   }
 }
 
