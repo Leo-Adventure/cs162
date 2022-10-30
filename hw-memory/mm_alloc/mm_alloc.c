@@ -45,7 +45,7 @@ void* split_heap(size_t size, struct block* block) {
   }
 }
 
-void coalease_heap(struct block* block) {
+void coalesce_heap(struct block* block) {
   if (block->next && block->next->free) {
     block->size = block->size + META_SIZE + block->next->size;
     block->next = block->next->next;
