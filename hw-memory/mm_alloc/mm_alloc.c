@@ -26,7 +26,7 @@ void* extend_heap(size_t size, struct block* prev) {
   return block;
 }
 
-void* split_heap(size_t size, struct block* block) {
+void split_heap(size_t size, struct block* block) {
   if (block->size - size > META_SIZE) {
     /* Get the splited block. */
     struct block* splited = (struct block*)(block->data + size);
@@ -39,9 +39,13 @@ void* split_heap(size_t size, struct block* block) {
     block->next = splited;
     block->free = 0;
     block->size = size;
+
+    memset(block->data, 0, size);
   } else {
     block->free = 0;
     block->size = size;
+
+    memset(block->data, 0, size);
   }
 }
 
