@@ -40,6 +40,16 @@ char* echo(char* input) {
   char* ret;
 
   /* TODO */
+  char **result;
+
+  result = echo_1(&input, clnt);
+  if (result == (char **)NULL) {
+    clnt_perror(clnt, "call failed");
+    exit(1);
+  }
+  /* Use strdup to store the result before free it. */
+  ret = strdup(*result);
+  xdr_free((xdrproc_t)xdr_int, (char *)result);
 
   clnt_destroy(clnt);
   
@@ -50,6 +60,9 @@ void put(buf key, buf value) {
   CLIENT *clnt = clnt_connect(HOST);
 
   /* TODO */
+  put_request argp = {&key, &value};
+
+  put_1(&argp, clnt);
 
   clnt_destroy(clnt);
 }
@@ -60,6 +73,11 @@ buf* get(buf key) {
   buf* ret;
 
   /* TODO */
+  ret = get_1(&key, clnt);
+  if (ret == (buf *)NULL) {
+    clnt_perror(clnt, "call failed");
+    exit(1);
+  }
 
   clnt_destroy(clnt);
   
