@@ -70,7 +70,7 @@ void print_job_info(struct job* job) {
   printf("Current job has %d map tasks, %d of them has finished\n", job->n_map, job->map_finished);
   printf("Every map task's current state is:\n");
   for (int i = 0; i < job->n_map; i++) {
-    printf("task %d\tassign time: %lld, success: %d\n", i, job->map_time[i], job->map_success[i]);
+    printf("task %d\tassign time: %ld, success: %d\n", i, job->map_time[i], job->map_success[i]);
   }
 
   printf("Current job has %d reduce tasks, %d of them has finished\n", job->n_reduce, job->reduce_finished);
@@ -79,7 +79,7 @@ void print_job_info(struct job* job) {
     printf("task %d\tassign time: %ld, success: %d\n", i, job->reduce_time[i], job->reduce_success[i]);
   }
 
-  printf("The job's auxilliary arguments are: %s\n", job->args->buffer);
+  printf("The job's auxilliary arguments are: %s\n", job->args);
 
   printf("Job done: %d, job failed: %d\n", job->done, job->failed);
 }
@@ -173,13 +173,10 @@ int* submit_job_1_svc(submit_job_request* argp, struct svc_req* rqstp) {
 
 
   printf("args: %s\n", argp->args.args_val);
-  new_job->args = malloc(sizeof(sized_buffer));
   if (argp->args.args_val == NULL || strlen(argp->args.args_val) == 0) {
-    new_job->args->length = 0;
-    new_job->args->buffer = NULL;
+    new_job->args = NULL;
   } else {
-    new_job->args->length = strlen(argp->args.args_val);
-    new_job->args->buffer = strdup(argp->args.args_val);
+    new_job->args = strdup(argp->args.args_val);
   }
 
   new_job->done = false;
@@ -214,6 +211,12 @@ poll_job_reply* poll_job_1_svc(int* argp, struct svc_req* rqstp) {
 
   static int job_id;
   job_id = *argp;
+
+  if (g_hash_table_size(all_jobs) == 0) {
+    printf("The hash table is empty\n");
+    result.invalid_job_id = true;
+    return &result;
+  }
 
   struct job* job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(job_id));
 
@@ -271,11 +274,11 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
         result.n_map = job->n_map;
         result.reduce = false;
         result.wait = false;
-        if (job->args->length == 0 || job->args->buffer == NULL) {
+        if (job->args == NULL) {
           result.args.args_len = 0;
         } else {
-          result.args.args_len = job->args->length;
-          result.args.args_val = strdup(job->args->buffer);
+          result.args.args_len = strlen(job->args);
+          result.args.args_val = strdup(job->args);
         }
         job->map_time[i] = time(NULL);
         printf("Assign job %d task(map) %d at time %ld\n", job->job_id, i, job->map_time[i]);
@@ -316,11 +319,11 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
         result.n_map = job->n_map;
         result.reduce = true;
         result.wait = false;
-        if (job->args->length == 0 || job->args->buffer == NULL) {
+        if (job->args == NULL) {
           result.args.args_len = 0;
         } else {
-          result.args.args_len = job->args->length;
-          result.args.args_val = strdup(job->args->buffer);
+          result.args.args_len = strlen(job->args);
+          result.args.args_val = strdup(job->args);
         }
         job->reduce_time[i] = time(NULL);
         return &result;

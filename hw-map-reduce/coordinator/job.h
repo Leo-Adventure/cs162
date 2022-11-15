@@ -25,7 +25,7 @@ struct job {
   int reduce_finished;
   bool* reduce_success; /* Size equals 'n_reduce', recording the assign time. */
   time_t* reduce_time;
-  sized_buffer* args;
+  char* args;
   bool done;
   bool failed;
 };
