@@ -268,13 +268,13 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
   static struct job* job;
 
   /* If worker crashes. */
-  // TODO
   for (elem = state->waiting_queue; elem; elem = elem->next) {
     lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
     job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
     printf("Job %d: try to reassign task\n", lookup_id);
     for (int i = 0; i < job->n_map; i++) {
-      if (job->map_time[i] != (time_t)0 && ((time(NULL) - job->map_time[i]) >= TASK_TIMEOUT_SECS)) {
+      /* Assigned but not finished. */
+      if (job->map_time[i] != (time_t)0 && ((time(NULL) - job->map_time[i]) >= TASK_TIMEOUT_SECS) && !job->map_success[i]) {
         init_task(&result, job, i, false);
         job->map_time[i] = time(NULL);
         return &result;
@@ -287,7 +287,7 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
     }
 
     for (int i = 0; i < job->n_reduce; i++) {
-      if (job->reduce_time[i] != (time_t)0 && ((time(NULL) - job->reduce_time[i]) >= TASK_TIMEOUT_SECS)) {
+      if (job->reduce_time[i] != (time_t)0 && ((time(NULL) - job->reduce_time[i]) >= TASK_TIMEOUT_SECS) && !job->reduce_success[i]) {
         init_task(&result, job, i, true);
         job->reduce_time[i] = time(NULL);
         return &result;
