@@ -277,7 +277,6 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
       if (job->map_time[i] != (time_t)0 && ((time(NULL) - job->map_time[i]) >= TASK_TIMEOUT_SECS)) {
         init_task(&result, job, i, false);
         job->map_time[i] = time(NULL);
-        printf("Reassign job %d task(reduce: %d) %d at time %ld\n", result.job_id, result.reduce, i, job->map_time[i]);
         return &result;
       }
     }
@@ -290,7 +289,7 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
     for (int i = 0; i < job->n_reduce; i++) {
       if (job->reduce_time[i] != (time_t)0 && ((time(NULL) - job->reduce_time[i]) >= TASK_TIMEOUT_SECS)) {
         init_task(&result, job, i, true);
-        job->map_time[i] = time(NULL);
+        job->reduce_time[i] = time(NULL);
         return &result;
       }
     }
