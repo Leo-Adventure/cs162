@@ -275,78 +275,65 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
     lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
     printf("Finding job %d for map task\n", lookup_id);
     job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
-    if (job->map_finished == job->n_map) {
-      continue;
-    }
+    // if (job->map_finished == job->n_map) {
+    //   continue;
+    // }
     for (int i = 0; i < job->n_map; i++) {
       if (job->map_time[i] == (time_t)0) {
-        /* Can write the content below to be a function. */
-        // result.job_id = job->job_id;
-        // result.task = i;
-        // result.file = strdup(job->files[i]);
-        // result.output_dir = strdup(job->output_dir);
-        // result.app = strdup(job->app);
-        // result.n_reduce = job->n_reduce;
-        // result.n_map = job->n_map;
-        // result.reduce = false;
-        // result.wait = false;
-        // if (job->args == NULL) {
-        //   result.args.args_len = 0;
-        // } else {
-        //   result.args.args_len = strlen(job->args);
-        //   result.args.args_val = strdup(job->args);
-        // }
         init_task(&result, job, i, false);
         job->map_time[i] = time(NULL);
-        printf("Assign job %d task(map) %d at time %ld\n", job->job_id, i, job->map_time[i]);
+        printf("Assign job %d task(reduce: %d) %d at time %ld\n", result.job_id, result.reduce, i, job->map_time[i]);
         return &result;
       }
     }
-    bool all_assigned = true;
-    for (int j = 0; j < job->n_map; j++) {
-      if (job->map_time[j] == (time_t)0) {
-        all_assigned = false;
-      }
+    // bool all_assigned = true;
+    // for (int j = 0; j < job->n_map; j++) {
+    //   if (job->map_time[j] == (time_t)0) {
+    //     all_assigned = false;
+    //   }
+    // }
+    /* 
+     * There exites a map task that has been assigned but not finished. 
+     * Then we don't assign its corresponding reduce task, and continue 
+     * searching the next one.
+     */
+    // if (all_assigned && job->map_finished < job->n_map) {
+    printf("Job %d finished %d map tasks, %d in total\n", job->job_id, job->map_finished, job->n_map);
+    if (job->map_finished < job->n_map) {
+      // assigned_not_finished_map_task = true;
+      continue;
     }
-    if (all_assigned && job->map_finished < job->n_map) {
-      assigned_not_finished_map_task = true;
-    }
-  }
 
-  /* If there is any map task that hasn't been finished, we wait and do nothing. */
-  if (assigned_not_finished_map_task) {
-    return &result;
-  }
-
-  /* If there is reduce task that hasn't been assigned. */
-  for (elem = state->waiting_queue; elem; elem = elem->next) {
-    lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
-    printf("Finding job %d for reduce task\n", lookup_id);
-    job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
+    printf("Job %d: all map tasks finished\n", job->job_id);
+    /* All map tasks are finished, then assign reduce task. */
     for (int i = 0; i < job->n_reduce; i++) {
       if (job->reduce_time[i] == (time_t)0) {
-        /* Can write the content below to be a function. */
-        // result.job_id = job->job_id;
-        // result.task = i;
-        // // result.file = job->file;
-        // result.output_dir = strdup(job->output_dir);
-        // result.app = strdup(job->app);
-        // result.n_reduce = job->n_reduce;
-        // result.n_map = job->n_map;
-        // result.reduce = true;
-        // result.wait = false;
-        // if (job->args == NULL) {
-        //   result.args.args_len = 0;
-        // } else {
-        //   result.args.args_len = strlen(job->args);
-        //   result.args.args_val = strdup(job->args);
-        // }
         init_task(&result, job, i, true);
         job->reduce_time[i] = time(NULL);
+        printf("Assign job %d task(reduce) %d at time %ld\n", job->job_id, i, job->map_time[i]);
         return &result;
       }
     }
   }
+
+  // /* If there is any map task that hasn't been finished, we wait and do nothing. */
+  // if (assigned_not_finished_map_task) {
+  //   return &result;
+  // }
+
+  // /* If there is reduce task that hasn't been assigned. */
+  // for (elem = state->waiting_queue; elem; elem = elem->next) {
+  //   lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
+  //   printf("Finding job %d for reduce task\n", lookup_id);
+  //   job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
+  //   for (int i = 0; i < job->n_reduce; i++) {
+  //     if (job->reduce_time[i] == (time_t)0) {
+  //       init_task(&result, job, i, true);
+  //       job->reduce_time[i] = time(NULL);
+  //       return &result;
+  //     }
+  //   }
+  // }
 
   return &result;
 }
@@ -398,6 +385,7 @@ void* finish_task_1_svc(finish_task_request* argp, struct svc_req* rqstp) {
       }
     } else {
       job->map_finished++;
+      printf("Job %d map task finished\n", job->job_id);
       job->map_success[argp->task] = true;
     }
   }
