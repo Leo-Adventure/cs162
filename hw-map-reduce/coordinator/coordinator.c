@@ -269,15 +269,12 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
   GList* elem = NULL;
   static int lookup_id;
   static struct job* job;
-  bool assigned_not_finished_map_task = false; // If there is a map task that has been assigned but not been finished.
   /* If there are map task that hasn't been assigned. */
   for (elem = state->waiting_queue; elem; elem = elem->next) {
     lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
     printf("Finding job %d for map task\n", lookup_id);
     job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
-    // if (job->map_finished == job->n_map) {
-    //   continue;
-    // }
+    /* Searching for unassigned map task. */
     for (int i = 0; i < job->n_map; i++) {
       if (job->map_time[i] == (time_t)0) {
         init_task(&result, job, i, false);
@@ -286,21 +283,14 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
         return &result;
       }
     }
-    // bool all_assigned = true;
-    // for (int j = 0; j < job->n_map; j++) {
-    //   if (job->map_time[j] == (time_t)0) {
-    //     all_assigned = false;
-    //   }
-    // }
+
     /* 
      * There exites a map task that has been assigned but not finished. 
      * Then we don't assign its corresponding reduce task, and continue 
      * searching the next one.
      */
-    // if (all_assigned && job->map_finished < job->n_map) {
     printf("Job %d finished %d map tasks, %d in total\n", job->job_id, job->map_finished, job->n_map);
     if (job->map_finished < job->n_map) {
-      // assigned_not_finished_map_task = true;
       continue;
     }
 
@@ -315,25 +305,6 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
       }
     }
   }
-
-  // /* If there is any map task that hasn't been finished, we wait and do nothing. */
-  // if (assigned_not_finished_map_task) {
-  //   return &result;
-  // }
-
-  // /* If there is reduce task that hasn't been assigned. */
-  // for (elem = state->waiting_queue; elem; elem = elem->next) {
-  //   lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
-  //   printf("Finding job %d for reduce task\n", lookup_id);
-  //   job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
-  //   for (int i = 0; i < job->n_reduce; i++) {
-  //     if (job->reduce_time[i] == (time_t)0) {
-  //       init_task(&result, job, i, true);
-  //       job->reduce_time[i] = time(NULL);
-  //       return &result;
-  //     }
-  //   }
-  // }
 
   return &result;
 }
