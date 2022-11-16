@@ -122,8 +122,9 @@ int* submit_job_1_svc(submit_job_request* argp, struct svc_req* rqstp) {
     new_job->app = strdup(argp->app);
     printf("app: %s\n", new_job->app);
   } else {
-    printf("In submit_job_1_svc: provided app doesn't exist\n");
-    return NULL;
+    printf("In submit_job_1_svc: provided app doesn't exist, return -1\n");
+    result = -1;
+    return &result;
   }
 
   new_job->n_map = argp->files.files_len;
@@ -296,8 +297,7 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
   }
 
   /* If there is reduce task that hasn't been assigned. */
-  // for (elem = state->waiting_queue; elem; elem = elem->next) {
-    elem = state->waiting_queue;
+  for (elem = state->waiting_queue; elem; elem = elem->next) {
     lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
     printf("Finding job %d for reduce task\n", lookup_id);
     job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
@@ -323,7 +323,7 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
         return &result;
       }
     }
-  // }
+  }
 
   return &result;
 }
