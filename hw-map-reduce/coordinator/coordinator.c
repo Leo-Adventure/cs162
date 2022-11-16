@@ -355,27 +355,38 @@ void* finish_task_1_svc(finish_task_request* argp, struct svc_req* rqstp) {
     return (void*)&result;
   }
   
-  /* Why I wrote this? */
-  /* Find the job in queue. */
-  GList* elem = NULL;
-  static int lookup_id;
-  struct job* job = NULL;
-  bool find = false;
-  for (elem = state->waiting_queue; elem; elem = elem->next) {
-    lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
-    job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
-    printf("finishing job %d\n", lookup_id);
-    if (job->job_id == job_id) {
-      find = true;
-      break;
-    }
-  }
-  if (!find) {
+  // /* Why I wrote this? */
+  // /* Find the job in queue. */
+  // GList* elem = NULL;
+  // static int lookup_id;
+  // struct job* job = NULL;
+  // bool find = false;
+  // for (elem = state->waiting_queue; elem; elem = elem->next) {
+  //   lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
+  //   job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
+  //   printf("finishing job %d\n", lookup_id);
+  //   if (job->job_id == job_id) {
+  //     find = true;
+  //     break;
+  //   }
+  // }
+  // if (!find) {
+  //   return (void*)&result;
+  // }
+
+  /* Find if job id is in the waiting queue. */
+  static GList* lookup_res;
+  static struct job* job;
+  lookup_res = g_list_find(state->waiting_queue, GINT_TO_POINTER(job_id));
+  if (lookup_res == NULL) {
     return (void*)&result;
   }
+
+  job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(job_id));
+
   if (success == false) {
     printf("Before remove, waiting queue has %d elements\n", g_list_length(state->waiting_queue));
-    state->waiting_queue = (state->waiting_queue, GINT_TO_POINTER(lookup_id));
+    state->waiting_queue = g_list_remove(state->waiting_queue, GINT_TO_POINTER(job_id));
     job->done = true;
     job->failed = true;
     printf("Job %d task %d failed finished, done: %d and failed %d\n", job_id, task, job->done, job->failed);
@@ -387,7 +398,7 @@ void* finish_task_1_svc(finish_task_request* argp, struct svc_req* rqstp) {
       if (job->reduce_finished == job->n_reduce) {
         job->done = true;
         job->failed = false;
-        state->waiting_queue = (state->waiting_queue, GINT_TO_POINTER(lookup_id));
+        state->waiting_queue = g_list_remove(state->waiting_queue, GINT_TO_POINTER(job_id));
       }
     } else {
       job->map_finished++;
