@@ -253,6 +253,9 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
     lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
     printf("Finding job %d for map task\n", lookup_id);
     job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
+    if (job->map_finished == job->n_map) {
+      continue;
+    }
     for (int i = 0; i < job->n_map; i++) {
       if (job->map_time[i] == (time_t)0) {
         /* Can write the content below to be a function. */
@@ -293,7 +296,8 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
   }
 
   /* If there is reduce task that hasn't been assigned. */
-  for (elem = state->waiting_queue; elem; elem = elem->next) {
+  // for (elem = state->waiting_queue; elem; elem = elem->next) {
+    elem = state->waiting_queue;
     lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
     printf("Finding job %d for reduce task\n", lookup_id);
     job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
@@ -319,7 +323,7 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
         return &result;
       }
     }
-  }
+  // }
 
   return &result;
 }
@@ -356,12 +360,9 @@ void* finish_task_1_svc(finish_task_request* argp, struct svc_req* rqstp) {
   job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(job_id));
 
   if (success == false) {
-    printf("Before remove, waiting queue has %d elements\n", g_list_length(state->waiting_queue));
-    state->waiting_queue = g_list_remove(state->waiting_queue, GINT_TO_POINTER(job_id));
     job->done = true;
     job->failed = true;
-    printf("Job %d task %d failed finished, done: %d and failed %d\n", job_id, task, job->done, job->failed);
-    printf("After remove, waiting queue has %d elements\n", g_list_length(state->waiting_queue));
+    state->waiting_queue = g_list_remove(state->waiting_queue, GINT_TO_POINTER(job_id));
   } else {
     if (argp->reduce) {
       job->reduce_finished++;
@@ -370,6 +371,7 @@ void* finish_task_1_svc(finish_task_request* argp, struct svc_req* rqstp) {
         job->done = true;
         job->failed = false;
         state->waiting_queue = g_list_remove(state->waiting_queue, GINT_TO_POINTER(job_id));
+        printf("Job %d finished\n", job_id);
       }
     } else {
       job->map_finished++;
