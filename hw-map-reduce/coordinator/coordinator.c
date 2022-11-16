@@ -263,16 +263,44 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
     return &result;
   }
 
-  /* If worker crashes. */
-  // TODO
-
   GList* elem = NULL;
   static int lookup_id;
   static struct job* job;
+
+  /* If worker crashes. */
+  // TODO
+  for (elem = state->waiting_queue; elem; elem = elem->next) {
+    lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
+    job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
+    printf("Job %d: try to reassign task\n", lookup_id);
+    for (int i = 0; i < job->n_map; i++) {
+      if (job->map_time[i] != (time_t)0 && ((time(NULL) - job->map_time[i]) >= TASK_TIMEOUT_SECS)) {
+        init_task(&result, job, i, false);
+        job->map_time[i] = time(NULL);
+        printf("Reassign job %d task(reduce: %d) %d at time %ld\n", result.job_id, result.reduce, i, job->map_time[i]);
+        return &result;
+      }
+    }
+
+    /* If not all map tasks are finished, then continue searching for next job. */
+    if (job->map_finished < job->n_map) {
+      continue;
+    }
+
+    for (int i = 0; i < job->n_reduce; i++) {
+      if (job->reduce_time[i] != (time_t)0 && ((time(NULL) - job->reduce_time[i]) >= TASK_TIMEOUT_SECS)) {
+        init_task(&result, job, i, true);
+        job->map_time[i] = time(NULL);
+        return &result;
+      }
+    }
+  }
+
+  printf("Nothing to reassign\n");
+
   /* If there are map task that hasn't been assigned. */
   for (elem = state->waiting_queue; elem; elem = elem->next) {
     lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
-    printf("Finding job %d for map task\n", lookup_id);
     job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
     /* Searching for unassigned map task. */
     for (int i = 0; i < job->n_map; i++) {
@@ -300,7 +328,7 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
       if (job->reduce_time[i] == (time_t)0) {
         init_task(&result, job, i, true);
         job->reduce_time[i] = time(NULL);
-        printf("Assign job %d task(reduce) %d at time %ld\n", job->job_id, i, job->map_time[i]);
+        printf("Assign job %d task(reduce) %d at time %ld\n", job->job_id, i, job->reduce_time[i]);
         return &result;
       }
     }
