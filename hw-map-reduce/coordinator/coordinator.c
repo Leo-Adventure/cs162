@@ -226,6 +226,27 @@ poll_job_reply* poll_job_1_svc(int* argp, struct svc_req* rqstp) {
   return &result;
 }
 
+/* Initialize a task information. */
+void init_task(get_task_reply* reply, struct job* job, int task, bool reduce) {
+  reply->job_id = job->job_id;
+  reply->task = task;
+  if (!reduce) {
+    reply->file = strdup(job->files[task]);
+  }
+  reply->output_dir = strdup(job->output_dir);
+  reply->app = strdup(job->app);
+  reply->n_reduce = job->n_reduce;
+  reply->n_map = job->n_map;
+  reply->reduce = reduce;
+  reply->wait = false;
+  if (job->args == NULL) {
+    reply->args.args_len = 0;
+  } else {
+    reply->args.args_len = strlen(job->args);
+    reply->args.args_val = strdup(job->args);
+  }
+}
+
 /* GET_TASK RPC implementation. */
 get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
   static get_task_reply result;
@@ -260,21 +281,22 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
     for (int i = 0; i < job->n_map; i++) {
       if (job->map_time[i] == (time_t)0) {
         /* Can write the content below to be a function. */
-        result.job_id = job->job_id;
-        result.task = i;
-        result.file = strdup(job->files[i]);
-        result.output_dir = strdup(job->output_dir);
-        result.app = strdup(job->app);
-        result.n_reduce = job->n_reduce;
-        result.n_map = job->n_map;
-        result.reduce = false;
-        result.wait = false;
-        if (job->args == NULL) {
-          result.args.args_len = 0;
-        } else {
-          result.args.args_len = strlen(job->args);
-          result.args.args_val = strdup(job->args);
-        }
+        // result.job_id = job->job_id;
+        // result.task = i;
+        // result.file = strdup(job->files[i]);
+        // result.output_dir = strdup(job->output_dir);
+        // result.app = strdup(job->app);
+        // result.n_reduce = job->n_reduce;
+        // result.n_map = job->n_map;
+        // result.reduce = false;
+        // result.wait = false;
+        // if (job->args == NULL) {
+        //   result.args.args_len = 0;
+        // } else {
+        //   result.args.args_len = strlen(job->args);
+        //   result.args.args_val = strdup(job->args);
+        // }
+        init_task(&result, job, i, false);
         job->map_time[i] = time(NULL);
         printf("Assign job %d task(map) %d at time %ld\n", job->job_id, i, job->map_time[i]);
         return &result;
@@ -304,21 +326,22 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
     for (int i = 0; i < job->n_reduce; i++) {
       if (job->reduce_time[i] == (time_t)0) {
         /* Can write the content below to be a function. */
-        result.job_id = job->job_id;
-        result.task = i;
-        // result.file = job->file;
-        result.output_dir = strdup(job->output_dir);
-        result.app = strdup(job->app);
-        result.n_reduce = job->n_reduce;
-        result.n_map = job->n_map;
-        result.reduce = true;
-        result.wait = false;
-        if (job->args == NULL) {
-          result.args.args_len = 0;
-        } else {
-          result.args.args_len = strlen(job->args);
-          result.args.args_val = strdup(job->args);
-        }
+        // result.job_id = job->job_id;
+        // result.task = i;
+        // // result.file = job->file;
+        // result.output_dir = strdup(job->output_dir);
+        // result.app = strdup(job->app);
+        // result.n_reduce = job->n_reduce;
+        // result.n_map = job->n_map;
+        // result.reduce = true;
+        // result.wait = false;
+        // if (job->args == NULL) {
+        //   result.args.args_len = 0;
+        // } else {
+        //   result.args.args_len = strlen(job->args);
+        //   result.args.args_val = strdup(job->args);
+        // }
+        init_task(&result, job, i, true);
         job->reduce_time[i] = time(NULL);
         return &result;
       }
