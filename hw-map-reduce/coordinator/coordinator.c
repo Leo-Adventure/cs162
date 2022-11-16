@@ -134,7 +134,6 @@ int* submit_job_1_svc(submit_job_request* argp, struct svc_req* rqstp) {
     printf("In submit_job_1_svc: malloc map_success failed\n");
     return NULL;
   }
-  // memset(new_job->map_success, false, sizeof(new_job->map_success));
   for (int i = 0; i < new_job->n_map; i++) {
     new_job->map_success[i] = false;
   }
@@ -144,7 +143,6 @@ int* submit_job_1_svc(submit_job_request* argp, struct svc_req* rqstp) {
     printf("In submit_job_1_svc: malloc map_time failed\n");
     return NULL;
   }
-  // memset(new_job->map_time, (time_t)0, sizeof(new_job->map_time));
   for (int i = 0; i < new_job->n_map; i++) {
     new_job->map_time[i] = (time_t)0;
   }
@@ -156,7 +154,6 @@ int* submit_job_1_svc(submit_job_request* argp, struct svc_req* rqstp) {
     printf("In submit_job_1_svc: malloc reduce_success failed\n");
     return NULL;
   }
-  // memset(new_job->reduce_success, false, sizeof(new_job->reduce_success));
   for (int i = 0; i < new_job->n_reduce; i++) {
     new_job->reduce_success[i] = false;
   }
@@ -166,7 +163,6 @@ int* submit_job_1_svc(submit_job_request* argp, struct svc_req* rqstp) {
     printf("In submit_job_1_svc: malloc reduce_time failed\n");
     return NULL;
   }
-  // memset(new_job->reduce_time, (time_t)0, sizeof(new_job->reduce_time));
   for (int i = 0; i < new_job->n_reduce; i++) {
     new_job->reduce_time[i] = false;
   }
@@ -189,8 +185,6 @@ int* submit_job_1_svc(submit_job_request* argp, struct svc_req* rqstp) {
   printf("Insert success\n");
   state->waiting_queue = g_list_append(state->waiting_queue, GINT_TO_POINTER(new_job->job_id));
   printf("Append success. Current length = %d\n", g_list_length(state->waiting_queue));
-
-  // print_job_info(new_job);
 
   /* Do not modify the following code. */
   /* BEGIN */
@@ -219,8 +213,6 @@ poll_job_reply* poll_job_1_svc(int* argp, struct svc_req* rqstp) {
   }
 
   struct job* job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(job_id));
-
-  // print_job_info(job);
 
   if (job == NULL) {
     result.invalid_job_id = true;
@@ -253,10 +245,9 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
   // TODO
 
   GList* elem = NULL;
-  // struct job* job = NULL;
   static int lookup_id;
   static struct job* job;
-  bool exist_not_finished_map_task = false; // If there is a map task that has been assigned but not been finished.
+  bool assigned_not_finished_map_task = false; // If there is a map task that has been assigned but not been finished.
   /* If there are map task that hasn't been assigned. */
   for (elem = state->waiting_queue; elem; elem = elem->next) {
     lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
@@ -292,13 +283,12 @@ get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
       }
     }
     if (all_assigned && job->map_finished < job->n_map) {
-      exist_not_finished_map_task = true;
-      break;
+      assigned_not_finished_map_task = true;
     }
   }
 
-  /* If there is any task that hasn't been finished, we wait and do nothing. */
-  if (exist_not_finished_map_task) {
+  /* If there is any map task that hasn't been finished, we wait and do nothing. */
+  if (assigned_not_finished_map_task) {
     return &result;
   }
 
@@ -354,25 +344,6 @@ void* finish_task_1_svc(finish_task_request* argp, struct svc_req* rqstp) {
   if (g_list_length(state->waiting_queue) == 0) {
     return (void*)&result;
   }
-  
-  // /* Why I wrote this? */
-  // /* Find the job in queue. */
-  // GList* elem = NULL;
-  // static int lookup_id;
-  // struct job* job = NULL;
-  // bool find = false;
-  // for (elem = state->waiting_queue; elem; elem = elem->next) {
-  //   lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
-  //   job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
-  //   printf("finishing job %d\n", lookup_id);
-  //   if (job->job_id == job_id) {
-  //     find = true;
-  //     break;
-  //   }
-  // }
-  // if (!find) {
-  //   return (void*)&result;
-  // }
 
   /* Find if job id is in the waiting queue. */
   static GList* lookup_res;
