@@ -190,7 +190,7 @@ int* submit_job_1_svc(submit_job_request* argp, struct svc_req* rqstp) {
   state->waiting_queue = g_list_append(state->waiting_queue, GINT_TO_POINTER(new_job->job_id));
   printf("Append success. Current length = %d\n", g_list_length(state->waiting_queue));
 
-  print_job_info(new_job);
+  // print_job_info(new_job);
 
   /* Do not modify the following code. */
   /* BEGIN */
@@ -220,7 +220,7 @@ poll_job_reply* poll_job_1_svc(int* argp, struct svc_req* rqstp) {
 
   struct job* job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(job_id));
 
-  print_job_info(job);
+  // print_job_info(job);
 
   if (job == NULL) {
     result.invalid_job_id = true;
@@ -355,6 +355,7 @@ void* finish_task_1_svc(finish_task_request* argp, struct svc_req* rqstp) {
     return (void*)&result;
   }
   
+  /* Why I wrote this? */
   /* Find the job in queue. */
   GList* elem = NULL;
   static int lookup_id;
@@ -365,7 +366,6 @@ void* finish_task_1_svc(finish_task_request* argp, struct svc_req* rqstp) {
     job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
     printf("finishing job %d\n", lookup_id);
     if (job->job_id == job_id) {
-      /* TODO: What if we can't find a job_id! */
       find = true;
       break;
     }
