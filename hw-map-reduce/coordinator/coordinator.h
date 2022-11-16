@@ -23,9 +23,10 @@
 #include <sys/stat.h>
 
 typedef struct {
-  int next_id; /* Initialized to be 0. */
+  int next_id;          /* Initialized to be 0. */
   GList* waiting_queue; /* Initialized to be NULL, store unfinished job id. */
 } coordinator;
 
 void coordinator_init(coordinator** coord_ptr);
+void init_task_reply(get_task_reply* reply, struct job* job, int task, bool reduce);
 #endif

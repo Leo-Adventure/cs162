@@ -13,21 +13,21 @@
 #include "../lib/lib.h"
 
 struct job {
-  int job_id;
-  char** files;
-  char* output_dir;
-  char* app;
-  int n_map;
-  int map_finished;
-  bool* map_success; /* Size equals 'n_map'. */
-  time_t* map_time; /* Size equals 'n_map', recording the assign time. */
-  int n_reduce;
-  int reduce_finished;
-  bool* reduce_success; /* Size equals 'n_reduce', recording the assign time. */
-  time_t* reduce_time;
-  char* args;
-  bool done;
-  bool failed;
+  int job_id;           /* A unique job id. */
+  char** files;         /* Input file data. */
+  char* output_dir;     /* Output directory. */
+  char* app;            /* Application used to deal with data. */
+  int n_map;            /* The number of map tasks, which equals file number. */
+  int map_finished;     /* The number of finished map tasks. */
+  bool* map_success;    /* An array tracking each map task's success status. */
+  time_t* map_time;     /* An array tracking each map task's assigning time. */
+  int n_reduce;         /* The number of map tasks, which equals file number. */
+  int reduce_finished;  /* The number of finished reduce tasks. */
+  bool* reduce_success; /* An array tracking each reduce task's success status. */
+  time_t* reduce_time;  /* An array tracking each reduce task's assigning time. */
+  char* args;           /* Auxiliary arguments. */
+  bool done;            /* Track job finish information. */
+  bool failed;          /* Track job success information. */
 };
 
 #endif

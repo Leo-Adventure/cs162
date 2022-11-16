@@ -57,82 +57,48 @@ int* example_1_svc(int* argp, struct svc_req* rqstp) {
   return &result;
 }
 
-/* Debug helper function. */
-void print_job_info(struct job* job) {
-  printf("Printing job infomation...\n");
-  printf("The job's id is %d\n", job->job_id);
-  printf("It has %d files:\n", job->n_map);
-  for (int i = 0; i < job->n_map; i++) {
-    printf("file %d\t%s\n", i, job->files[i]);
-  }
-  printf("We'll out put the result to %s using %s\n", job->output_dir, job->app);
-
-  printf("Current job has %d map tasks, %d of them has finished\n", job->n_map, job->map_finished);
-  printf("Every map task's current state is:\n");
-  for (int i = 0; i < job->n_map; i++) {
-    printf("task %d\tassign time: %ld, success: %d\n", i, job->map_time[i], job->map_success[i]);
-  }
-
-  printf("Current job has %d reduce tasks, %d of them has finished\n", job->n_reduce, job->reduce_finished);
-  printf("Every reduce task's current state is:\n");
-  for (int i = 0; i < job->n_reduce; i++) {
-    printf("task %d\tassign time: %ld, success: %d\n", i, job->reduce_time[i], job->reduce_success[i]);
-  }
-
-  printf("The job's auxilliary arguments are: %s\n", job->args);
-
-  printf("Job done: %d, job failed: %d\n", job->done, job->failed);
-}
-
 /* SUBMIT_JOB RPC implementation. */
 int* submit_job_1_svc(submit_job_request* argp, struct svc_req* rqstp) {
   static int result;
+  struct job* new_job;
 
   printf("Received submit job request\n");
 
-  /* Assign a job ID. */
+  /* Assign a unique job ID, starting from 0. */
   result = state->next_id++;
   
   /* Malloc a new job and initialize. */
-  struct job* new_job = malloc(sizeof(struct job));
+  new_job = malloc(sizeof(struct job));
   if (new_job == NULL) {
-    printf("In submit_job_1_svc: malloc new_job failed\n");
     return NULL;
   }
-
-  printf("In submit_job_1_svc: malloc new_job success\n");
-
   new_job->job_id = result;
-  printf("new job_is is %d\n", new_job->job_id);
+
   /* Duplicate files. */
   new_job->files = malloc(sizeof(char*) * argp->files.files_len);
   for (int i = 0; i < argp->files.files_len; i++) {
     new_job->files[i] = strdup(argp->files.files_val[i]);
-    printf("file[%d]: %s\n", i, new_job->files[i]);
     if (new_job->files[i] == NULL) {
-      printf("In submit_job_1_svc: malloc file %d failed\n", i);
       return NULL;
     }
   }
 
+  /* Output directory. */
   new_job->output_dir = strdup(argp->output_dir);
-  printf("output_dir: %s\n", new_job->output_dir);
   
+  /* Application. */
   if (get_app(argp->app).name != NULL) {
     new_job->app = strdup(argp->app);
-    printf("app: %s\n", new_job->app);
   } else {
-    printf("In submit_job_1_svc: provided app doesn't exist, return -1\n");
     result = -1;
     return &result;
   }
 
+  /* Map tasks' information. */
   new_job->n_map = argp->files.files_len;
-  printf("files_len: %d\n", new_job->n_map);
   new_job->map_finished = 0;
   new_job->map_success = malloc(sizeof(bool) * new_job->n_map);
   if (new_job->map_success == NULL) {
-    printf("In submit_job_1_svc: malloc map_success failed\n");
     return NULL;
   }
   for (int i = 0; i < new_job->n_map; i++) {
@@ -141,18 +107,17 @@ int* submit_job_1_svc(submit_job_request* argp, struct svc_req* rqstp) {
 
   new_job->map_time = malloc(sizeof(time_t) * new_job->n_map);
   if (new_job->map_time == NULL) {
-    printf("In submit_job_1_svc: malloc map_time failed\n");
     return NULL;
   }
   for (int i = 0; i < new_job->n_map; i++) {
     new_job->map_time[i] = (time_t)0;
   }
 
+  /* Reduce tasks' information. */
   new_job->n_reduce = argp->n_reduce;
   new_job->reduce_finished = 0;
   new_job->reduce_success = malloc(sizeof(bool) * new_job->n_reduce);
   if (new_job->reduce_success == NULL) {
-    printf("In submit_job_1_svc: malloc reduce_success failed\n");
     return NULL;
   }
   for (int i = 0; i < new_job->n_reduce; i++) {
@@ -161,31 +126,27 @@ int* submit_job_1_svc(submit_job_request* argp, struct svc_req* rqstp) {
 
   new_job->reduce_time = malloc(sizeof(time_t) * new_job->n_reduce);
   if (new_job->reduce_time == NULL) {
-    printf("In submit_job_1_svc: malloc reduce_time failed\n");
     return NULL;
   }
   for (int i = 0; i < new_job->n_reduce; i++) {
-    new_job->reduce_time[i] = false;
+    new_job->reduce_time[i] = (time_t)0;
   }
 
-
-  printf("args: %s\n", argp->args.args_val);
+  /* Auxiliary auguments. */
   if (argp->args.args_val == NULL || strlen(argp->args.args_val) == 0) {
     new_job->args = NULL;
   } else {
     new_job->args = strdup(argp->args.args_val);
   }
 
+  /* Information. */
   new_job->done = false;
   new_job->failed = false;
 
   /* Insert new_job into hash table and waiting queue. */
-  printf("Job_id is: %d\n", new_job->job_id);
   int tmp = new_job->job_id;
   g_hash_table_insert(all_jobs, GINT_TO_POINTER(tmp), new_job);
-  printf("Insert success\n");
   state->waiting_queue = g_list_append(state->waiting_queue, GINT_TO_POINTER(new_job->job_id));
-  printf("Append success. Current length = %d\n", g_list_length(state->waiting_queue));
 
   /* Do not modify the following code. */
   /* BEGIN */
@@ -201,20 +162,20 @@ int* submit_job_1_svc(submit_job_request* argp, struct svc_req* rqstp) {
 /* POLL_JOB RPC implementation. */
 poll_job_reply* poll_job_1_svc(int* argp, struct svc_req* rqstp) {
   static poll_job_reply result;
+  static int job_id;
+  struct job* job;
 
   printf("Received poll job request\n");
 
-  static int job_id;
   job_id = *argp;
-
+  /* Get job by searching all_jobs. If all_job is empty, report invalid job id*/
   if (g_hash_table_size(all_jobs) == 0) {
-    printf("The hash table is empty\n");
     result.invalid_job_id = true;
     return &result;
   }
+  job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(job_id));
 
-  struct job* job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(job_id));
-
+  /* Update job reply information. */
   if (job == NULL) {
     result.invalid_job_id = true;
   } else {
@@ -226,8 +187,167 @@ poll_job_reply* poll_job_1_svc(int* argp, struct svc_req* rqstp) {
   return &result;
 }
 
-/* Initialize a task information. */
-void init_task(get_task_reply* reply, struct job* job, int task, bool reduce) {
+/* GET_TASK RPC implementation. */
+get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
+  static get_task_reply result;
+  GList* elem;
+  static int lookup_id;
+  static struct job* job;
+
+  printf("Received get task request\n");
+  result.file = "";
+  result.output_dir = "";
+  result.app = "";
+  result.wait = true;
+  result.args.args_len = 0;
+
+  /* If the queue is empty. */
+  if (g_list_length(state->waiting_queue) == 0) {
+    return &result;
+  }
+
+  /* If worker crashes, reassign task. */
+  for (elem = state->waiting_queue; elem; elem = elem->next) {
+    lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
+    job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
+
+    /* Find assigned map task that hasn't been finished and that has expired. */
+    for (int i = 0; i < job->n_map; i++) {
+      if (job->map_time[i] != (time_t)0 && 
+         ((time(NULL) - job->map_time[i]) >= TASK_TIMEOUT_SECS) && 
+         !job->map_success[i]) {
+        init_task_reply(&result, job, i, false);
+        job->map_time[i] = time(NULL);
+        return &result;
+      }
+    }
+
+    /* If not all map tasks are finished, continue searching for next job. */
+    if (job->map_finished < job->n_map) {
+      continue;
+    }
+
+    /* Find assigned reduce task that hasn't been finished and that has expired. */
+    for (int i = 0; i < job->n_reduce; i++) {
+      if (job->reduce_time[i] != (time_t)0 && 
+         ((time(NULL) - job->reduce_time[i]) >= TASK_TIMEOUT_SECS) && 
+         !job->reduce_success[i]) {
+        init_task_reply(&result, job, i, true);
+        job->reduce_time[i] = time(NULL);
+        return &result;
+      }
+    }
+  }
+
+  /* If there is map task that hasn't been assigned. */
+  for (elem = state->waiting_queue; elem; elem = elem->next) {
+    lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
+    job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
+    /* Searching for unassigned map task. */
+    for (int i = 0; i < job->n_map; i++) {
+      if (job->map_time[i] == (time_t)0) {
+        init_task_reply(&result, job, i, false);
+        job->map_time[i] = time(NULL);
+        return &result;
+      }
+    }
+
+    /* 
+     * There exites a map task that has been assigned but not finished. 
+     * Then we don't assign its corresponding reduce task, and continue 
+     * searching the next one.
+     */
+    if (job->map_finished < job->n_map) {
+      continue;
+    }
+
+    /* All map tasks are finished, then assign reduce task. */
+    for (int i = 0; i < job->n_reduce; i++) {
+      if (job->reduce_time[i] == (time_t)0) {
+        init_task_reply(&result, job, i, true);
+        job->reduce_time[i] = time(NULL);
+        return &result;
+      }
+    }
+  }
+
+  return &result;
+}
+
+/* FINISH_TASK RPC implementation. */
+void* finish_task_1_svc(finish_task_request* argp, struct svc_req* rqstp) {
+  static char* result;
+  static int job_id;
+  static int task;
+  static bool reduce;
+  static bool success;
+  static GList* lookup_res;
+  static struct job* job;
+
+  printf("Received finish task request\n");
+
+  job_id = argp->job_id;
+  task = argp->task;
+  reduce = argp->reduce;
+  success = argp->success;
+
+  /* If waiting queue is empty. */
+  if (g_list_length(state->waiting_queue) == 0) {
+    return (void*)&result;
+  }
+
+  /* 
+   * Get desired job in the waiting queue by searching job_id. 
+   * The job may not be in the waiting queue, since other worker
+   * may fail its own task belonging to this job and remove the job
+   * from waiting queue before current task is finished.
+   */
+  lookup_res = g_list_find(state->waiting_queue, GINT_TO_POINTER(job_id));
+  if (lookup_res == NULL) {
+    return (void*)&result;
+  }
+  job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(job_id));
+
+  /* Update job information. */
+  if (success == false) {
+    /* Worker fails to finish a task. */
+    job->done = true;
+    job->failed = true;
+    state->waiting_queue = g_list_remove(state->waiting_queue, GINT_TO_POINTER(job_id));
+
+  } else {
+    /* Worker finishes a task successfully. */
+    if (argp->reduce) {
+      job->reduce_finished++;
+      job->reduce_success[argp->task] = true;
+      /* Job is finished successfully. */
+      if (job->reduce_finished == job->n_reduce) {
+        job->done = true;
+        job->failed = false;
+        state->waiting_queue = g_list_remove(state->waiting_queue, GINT_TO_POINTER(job_id));
+      }
+    } else {
+      job->map_finished++;
+      job->map_success[argp->task] = true;
+    }
+  }
+
+  return (void*)&result;
+}
+
+/* Initialize coordinator state. */
+void coordinator_init(coordinator** coord_ptr) {
+  *coord_ptr = malloc(sizeof(coordinator));
+
+  coordinator* coord = *coord_ptr;
+
+  coord->next_id = 0;
+  coord->waiting_queue = NULL;
+  all_jobs = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, NULL);
+}
+
+/* Initialize a task reply information. */
+void init_task_reply(get_task_reply* reply, struct job* job, int task, bool reduce) {
   reply->job_id = job->job_id;
   reply->task = task;
   if (!reduce) {
@@ -245,159 +365,4 @@ void init_task(get_task_reply* reply, struct job* job, int task, bool reduce) {
     reply->args.args_len = strlen(job->args);
     reply->args.args_val = strdup(job->args);
   }
-}
-
-/* GET_TASK RPC implementation. */
-get_task_reply* get_task_1_svc(void* argp, struct svc_req* rqstp) {
-  static get_task_reply result;
-
-  printf("Received get task request\n");
-  result.file = "";
-  result.output_dir = "";
-  result.app = "";
-  result.wait = true;
-  result.args.args_len = 0;
-
-  /* If the queue is empty. */
-  if (g_list_length(state->waiting_queue) == 0) {
-    return &result;
-  }
-
-  GList* elem = NULL;
-  static int lookup_id;
-  static struct job* job;
-
-  /* If worker crashes. */
-  for (elem = state->waiting_queue; elem; elem = elem->next) {
-    lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
-    job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
-    printf("Job %d: try to reassign task\n", lookup_id);
-    for (int i = 0; i < job->n_map; i++) {
-      /* Assigned but not finished. */
-      if (job->map_time[i] != (time_t)0 && ((time(NULL) - job->map_time[i]) >= TASK_TIMEOUT_SECS) && !job->map_success[i]) {
-        init_task(&result, job, i, false);
-        job->map_time[i] = time(NULL);
-        return &result;
-      }
-    }
-
-    /* If not all map tasks are finished, then continue searching for next job. */
-    if (job->map_finished < job->n_map) {
-      continue;
-    }
-
-    for (int i = 0; i < job->n_reduce; i++) {
-      if (job->reduce_time[i] != (time_t)0 && ((time(NULL) - job->reduce_time[i]) >= TASK_TIMEOUT_SECS) && !job->reduce_success[i]) {
-        init_task(&result, job, i, true);
-        job->reduce_time[i] = time(NULL);
-        return &result;
-      }
-    }
-  }
-
-  printf("Nothing to reassign\n");
-
-  /* If there are map task that hasn't been assigned. */
-  for (elem = state->waiting_queue; elem; elem = elem->next) {
-    lookup_id = GPOINTER_TO_INT(elem->data); // Cast back to an integer.
-    job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(lookup_id));
-    /* Searching for unassigned map task. */
-    for (int i = 0; i < job->n_map; i++) {
-      if (job->map_time[i] == (time_t)0) {
-        init_task(&result, job, i, false);
-        job->map_time[i] = time(NULL);
-        printf("Assign job %d task(reduce: %d) %d at time %ld\n", result.job_id, result.reduce, i, job->map_time[i]);
-        return &result;
-      }
-    }
-
-    /* 
-     * There exites a map task that has been assigned but not finished. 
-     * Then we don't assign its corresponding reduce task, and continue 
-     * searching the next one.
-     */
-    printf("Job %d finished %d map tasks, %d in total\n", job->job_id, job->map_finished, job->n_map);
-    if (job->map_finished < job->n_map) {
-      continue;
-    }
-
-    printf("Job %d: all map tasks finished\n", job->job_id);
-    /* All map tasks are finished, then assign reduce task. */
-    for (int i = 0; i < job->n_reduce; i++) {
-      if (job->reduce_time[i] == (time_t)0) {
-        init_task(&result, job, i, true);
-        job->reduce_time[i] = time(NULL);
-        printf("Assign job %d task(reduce) %d at time %ld\n", job->job_id, i, job->reduce_time[i]);
-        return &result;
-      }
-    }
-  }
-
-  return &result;
-}
-
-/* FINISH_TASK RPC implementation. */
-void* finish_task_1_svc(finish_task_request* argp, struct svc_req* rqstp) {
-  static char* result;
-
-  printf("Received finish task request\n");
-
-  static int job_id;
-  static int task;
-  static bool reduce;
-  static bool success;
-
-  job_id = argp->job_id;
-  task = argp->task;
-  reduce = argp->reduce;
-  success = argp->success;
-
-  /* If waiting queue is empty. */
-  if (g_list_length(state->waiting_queue) == 0) {
-    return (void*)&result;
-  }
-
-  /* Find if job id is in the waiting queue. */
-  static GList* lookup_res;
-  static struct job* job;
-  lookup_res = g_list_find(state->waiting_queue, GINT_TO_POINTER(job_id));
-  if (lookup_res == NULL) {
-    return (void*)&result;
-  }
-
-  job = g_hash_table_lookup(all_jobs, GINT_TO_POINTER(job_id));
-
-  if (success == false) {
-    job->done = true;
-    job->failed = true;
-    state->waiting_queue = g_list_remove(state->waiting_queue, GINT_TO_POINTER(job_id));
-  } else {
-    if (argp->reduce) {
-      job->reduce_finished++;
-      job->reduce_success[argp->task] = true;
-      if (job->reduce_finished == job->n_reduce) {
-        job->done = true;
-        job->failed = false;
-        state->waiting_queue = g_list_remove(state->waiting_queue, GINT_TO_POINTER(job_id));
-        printf("Job %d finished\n", job_id);
-      }
-    } else {
-      job->map_finished++;
-      printf("Job %d map task finished\n", job->job_id);
-      job->map_success[argp->task] = true;
-    }
-  }
-
-  return (void*)&result;
-}
-
-/* Initialize coordinator state. */
-void coordinator_init(coordinator** coord_ptr) {
-  *coord_ptr = malloc(sizeof(coordinator));
-
-  coordinator* coord = *coord_ptr;
-
-  coord->next_id = 0;
-  coord->waiting_queue = NULL;
-  all_jobs = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, NULL);
 }
