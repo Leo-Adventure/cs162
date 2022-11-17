@@ -29,4 +29,5 @@ typedef struct {
 
 void coordinator_init(coordinator** coord_ptr);
 void init_task_reply(get_task_reply* reply, struct job* job, int task, bool reduce);
+void free_job_memory(struct job* job);
 #endif

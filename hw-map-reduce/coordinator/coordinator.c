@@ -314,6 +314,7 @@ void* finish_task_1_svc(finish_task_request* argp, struct svc_req* rqstp) {
     job->done = true;
     job->failed = true;
     state->waiting_queue = g_list_remove(state->waiting_queue, GINT_TO_POINTER(job_id));
+    free_job_memory(job);
 
   } else {
     /* Worker finishes a task successfully. */
@@ -325,6 +326,7 @@ void* finish_task_1_svc(finish_task_request* argp, struct svc_req* rqstp) {
         job->done = true;
         job->failed = false;
         state->waiting_queue = g_list_remove(state->waiting_queue, GINT_TO_POINTER(job_id));
+        free_job_memory(job);
       }
     } else {
       job->map_finished++;
@@ -365,4 +367,24 @@ void init_task_reply(get_task_reply* reply, struct job* job, int task, bool redu
     reply->args.args_len = strlen(job->args);
     reply->args.args_val = strdup(job->args);
   }
+}
+
+/* 
+ * After a job is done, files and task information
+ * are useless. We free them to save memory.
+ */
+void free_job_memory(struct job* job) {
+  /* Files. */
+  for (int i = 0; i < job->n_map; i++) {
+    free(job->files[i]);
+  }
+  free(job->files);
+
+  /* Map tasks' information. */
+  free(job->map_success);
+  free(job->map_time);
+
+  /* Reduce tasks' information. */
+  free(job->reduce_success);
+  free(job->reduce_time);
 }
